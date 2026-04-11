@@ -1,0 +1,37 @@
+[package]
+name = "garfield"
+version = "0.1.0"
+edition = "2021"
+description = "Build knowledge graph from source code"
+license = "MIT"
+
+[dependencies]
+# Graph
+petgraph = "0.8"
+
+# Tree-sitter - RECOMMENDED: tree-sitter-language-pack
+tree-sitter-language-pack = "1.4"
+tree-sitter = "0.26"
+
+# Community detection - RECOMMENDED
+single-clustering = "0.6"
+
+# Utilities
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+walkdir = "2.5"
+rayon = "1.11"
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
+
+[lib]
+name = "garfield"
+path = "src/lib.rs"
+
+[[bin]]
+name = "garfield"
+path = "src/main.rs"
+
+[dev-dependencies]
+tempfile = "3.8"
