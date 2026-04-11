@@ -73,33 +73,10 @@ enum Cli {
         graph: String,
     },
     
-    /// Install PI extension and skill
-    Install {
-        /// Target: pi, all (default: all)
-        #[arg(default_value = "all")]
-        target: String,
-        
-        /// Use symlink instead of copy
-        #[arg(long, short = 's')]
-        symlink: bool,
-        
-        /// Force overwrite existing files
-        #[arg(long, short = 'f')]
-        force: bool,
-    },
-    
-    /// Uninstall PI integration
-    Uninstall {
-        /// Target: pi, all (default: all)
-        #[arg(default_value = "all")]
-        target: String,
-    },
-    
-    /// Install configuration files for various agents (Claude, Cursor, etc.)
-    Agents {
-        /// Agent type: claude, cursor, all (default: all)
-        #[arg(default_value = "all")]
-        agent: String,
+    /// Install agent integration (pi, claude, cursor)
+    Agent {
+        /// Agent name: pi, claude, cursor
+        name: String,
         
         /// Force overwrite existing files
         #[arg(long, short = 'f')]
@@ -229,16 +206,8 @@ fn main() {
             }
         }
         
-        Cli::Install { target, symlink, force } => {
-            install_pi(&target, symlink, force);
-        }
-        
-        Cli::Uninstall { target } => {
-            uninstall_pi(&target);
-        }
-        
-        Cli::Agents { agent, force } => {
-            install_agents(&agent, force);
+        Cli::Agent { name, force } => {
+            install_agent(&name, force);
         }
         
         Cli::Serve { graph } => {
@@ -246,133 +215,175 @@ fn main() {
             println!("Graph: {}", graph);
             println!("\nMCP server running. Press Ctrl+C to stop.");
             
-            // TODO: Implement actual MCP server
-            // For now, just show info
             println!("\n⚠️  MCP server not yet implemented.");
             println!("Use 'gf build' to build the graph, then query with 'gf query'.");
         }
     }
 }
 
-/// Install PI extension and skill
-fn install_pi(target: &str, _use_symlink: bool, force: bool) {
+/// Install agent integration
+fn install_agent(name: &str, force: bool) {
     use std::fs;
     
-    println!("gf install - Setting up PI integration\n");
+    println!("gf agent {} - Installing agent integration\n", name);
     
-    // Get home directory
+    // Get home directory and exe path
     let home = dirs::home_dir().expect("Could not find home directory");
-    
-    // Get current executable path
     let current_exe = std::env::current_exe().expect("Could not get current executable path");
     let exe_path = current_exe.to_string_lossy().to_string();
+    let gf_binary = if cfg!(windows) { "gf.exe" } else { "gf" };
     
-    // Check if we should install extension
-    let install_ext = target == "all" || target == "pi" || target == "extension";
-    let install_skill = target == "all" || target == "pi" || target == "skill";
+    // Get current directory for graph path
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let graph_json_path = cwd.join("graphify-out/graph.json");
+    let graph_json_absolute = graph_json_path.to_string_lossy().to_string();
     
-    if install_ext {
-        let ext_dir = home.join(".pi/agent/extensions/garfield");
-        let ext_file = ext_dir.join("index.ts");
-        
+    // Get agent directory
+    let agent_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("agents").join(name);
+    
+    if !agent_dir.exists() {
+        eprintln!("❌ Unknown agent: {}", name);
+        eprintln!("Available agents:");
+        eprintln!("  pi      - PI agent (✅ Ready)");
+        eprintln!("  claude  - Claude Code (🚧 Coming soon)");
+        eprintln!("  cursor  - Cursor IDE (🚧 Coming soon)");
+        std::process::exit(1);
+    }
+    
+    match name {
+        "pi" => install_pi_agent(&home, &exe_path, force),
+        "claude" => install_claude_agent(&cwd, gf_binary, &graph_json_absolute, force),
+        "cursor" => install_cursor_agent(&cwd, gf_binary, force),
+        _ => {
+            eprintln!("❌ Unknown agent: {}", name);
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Install PI agent
+fn install_pi_agent(home: &std::path::Path, exe_path: &str, force: bool) {
+    use std::fs;
+    
+    let ext_dir = home.join(".pi/agent/extensions/garfield");
+    let skill_dir = home.join(".pi/agent/skills/garfield");
+    
+    // Get agent source directory
+    let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("agents/pi");
+    
+    // Install extension
+    let ext_src = src_dir.join("index.ts");
+    if ext_src.exists() {
         println!("📦 Installing PI Extension...");
-        println!("  Path: {}", ext_dir.display());
+        println!("  Source: {}", ext_src.display());
+        println!("  Dest:   {}", ext_dir.display());
         
-        // Create directory
         if !ext_dir.exists() {
             fs::create_dir_all(&ext_dir).expect("Failed to create extension directory");
         }
         
-        // Generate extension content
-        let ext_content = generate_extension_ts(&exe_path);
-        
-        // Check if file exists
-        if ext_file.exists() && !force {
+        let ext_dst = ext_dir.join("index.ts");
+        if ext_dst.exists() && !force {
             println!("  ⚠️  Extension already exists (use -f to overwrite)");
         } else {
-            fs::write(&ext_file, ext_content).expect("Failed to write extension file");
+            // Generate extension with correct exe path
+            let ext_content = generate_extension_ts(exe_path);
+            fs::write(&ext_dst, ext_content).expect("Failed to write extension file");
             println!("  ✅ Extension installed!");
         }
     }
     
-    if install_skill {
-        let skill_dir = home.join(".pi/agent/skills/garfield");
-        let skill_file = skill_dir.join("SKILL.md");
-        
+    // Install skill
+    let skill_src = src_dir.join("SKILL.md");
+    if skill_src.exists() {
         println!("\n📚 Installing PI Skill...");
-        println!("  Path: {}", skill_dir.display());
+        println!("  Source: {}", skill_src.display());
+        println!("  Dest:   {}", skill_dir.display());
         
-        // Create directory
         if !skill_dir.exists() {
             fs::create_dir_all(&skill_dir).expect("Failed to create skill directory");
         }
         
-        // Generate skill content
-        let skill_content = generate_skill_md();
-        
-        if skill_file.exists() && !force {
+        let skill_dst = skill_dir.join("SKILL.md");
+        if skill_dst.exists() && !force {
             println!("  ⚠️  Skill already exists (use -f to overwrite)");
         } else {
-            fs::write(&skill_file, skill_content).expect("Failed to write skill file");
+            let skill_content = fs::read_to_string(&skill_src).expect("Failed to read skill file");
+            fs::write(&skill_dst, skill_content).expect("Failed to write skill file");
             println!("  ✅ Skill installed!");
         }
     }
     
-    println!("\n✨ Installation complete!");
+    println!("\n✨ PI agent installation complete!");
     println!("\nNext steps:");
     println!("  1. Start PI: pi");
     println!("  2. Type /reload to load the extension");
     println!("  3. Try: /gf help");
 }
 
-/// Uninstall PI integration
-fn uninstall_pi(target: &str) {
+/// Install Claude agent (AGENTS.md + MCP config)
+fn install_claude_agent(cwd: &std::path::Path, gf_binary: &str, graph_json_path: &str, force: bool) {
     use std::fs;
     
-    println!("gf uninstall - Removing PI integration\n");
+    let agents_md = cwd.join("AGENTS.md");
+    let mcp_config = cwd.join(".claude_desktop_config.json");
     
-    let home = dirs::home_dir().expect("Could not find home directory");
+    println!("📝 Installing Claude Code integration...");
+    println!("  AGENTS.md: {}", agents_md.display());
     
-    let uninstall_ext = target == "all" || target == "pi" || target == "extension";
-    let uninstall_skill = target == "all" || target == "pi" || target == "skill";
-    
-    if uninstall_ext {
-        let ext_dir = home.join(".pi/agent/extensions/garfield");
-        if ext_dir.exists() {
-            fs::remove_dir_all(&ext_dir).expect("Failed to remove extension directory");
-            println!("🗑️  Removed extension: {}", ext_dir.display());
-        } else {
-            println!("⚠️  Extension not found: {}", ext_dir.display());
-        }
+    if agents_md.exists() && !force {
+        println!("  ⚠️  AGENTS.md already exists (use -f to overwrite)");
+    } else {
+        let content = generate_agents_md(gf_binary);
+        fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
+        println!("  ✅ AGENTS.md installed!");
     }
     
-    if uninstall_skill {
-        let skill_dir = home.join(".pi/agent/skills/garfield");
-        if skill_dir.exists() {
-            fs::remove_dir_all(&skill_dir).expect("Failed to remove skill directory");
-            println!("🗑️  Removed skill: {}", skill_dir.display());
-        } else {
-            println!("⚠️  Skill not found: {}", skill_dir.display());
-        }
+    println!("\n🔌 Installing Claude Desktop MCP...");
+    println!("  Config: {}", mcp_config.display());
+    
+    if mcp_config.exists() && !force {
+        println!("  ⚠️  .claude_desktop_config.json already exists (use -f to overwrite)");
+    } else {
+        let content = generate_mcp_config(graph_json_path, gf_binary);
+        fs::write(&mcp_config, content).expect("Failed to write MCP config");
+        println!("  ✅ MCP config installed!");
     }
     
-    println!("\n✨ Uninstallation complete!");
+    println!("\n✨ Claude agent installation complete!");
+    println!("\nSupported:");
+    println!("  Claude Code    - Reads AGENTS.md automatically");
+    println!("  Claude Desktop - Uses .claude_desktop_config.json");
+}
+
+/// Install Cursor agent (AGENTS.md)
+fn install_cursor_agent(cwd: &std::path::Path, gf_binary: &str, force: bool) {
+    use std::fs;
+    
+    let agents_md = cwd.join("AGENTS.md");
+    
+    println!("📝 Installing Cursor integration...");
+    println!("  AGENTS.md: {}", agents_md.display());
+    
+    if agents_md.exists() && !force {
+        println!("  ⚠️  AGENTS.md already exists (use -f to overwrite)");
+    } else {
+        let content = generate_agents_md(gf_binary);
+        fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
+        println!("  ✅ AGENTS.md installed!");
+    }
+    
+    println!("\n✨ Cursor agent installation complete!");
 }
 
 /// Generate TypeScript extension content
-fn generate_extension_ts(_exe_path: &str) -> String {
-    format!(r#"""
-/**
+fn generate_extension_ts(exe_path: &str) -> String {
+    format!(r#"/**
  * Garfield PI Extension
  * 
- * Auto-generated by gf install
+ * Auto-generated by: gf agent pi
  * Garfield is a Rust-based code extraction tool.
- * 
- * Usage:
- *   /gf build <path>       - Build knowledge graph
- *   /gf query <question>   - Query the graph
- *   /gf path <A> <B>       - Find path between nodes
- *   /gf explain <name>     - Explain a node
+ * Binary: {exe_path}
  */
 
 import type {{ ExtensionAPI }} from "@mariozechner/pi-coding-agent";
@@ -400,8 +411,8 @@ interface GarfieldGraph {{
     }};
 }}
 
-// Garfield binary path (auto-detected)
-const GF_BINARY = "gf";
+// Garfield binary path
+const GF_BINARY = "{exe_path}";
 
 function loadGraph(graphPath: string = "graphify-out/graph.json"): GarfieldGraph | null {{
     try {{
@@ -430,8 +441,7 @@ export default function garfieldExtension(pi: ExtensionAPI) {{
                 case "report": {{
                     const report = loadGraph();
                     if (report) {{
-                        ctx.ui.notify(`Graph: ${{report.metadata?.total_nodes || 0}} nodes, ${{
-eport.metadata?.total_edges || 0}} edges`, "info");
+                        ctx.ui.notify(`Graph: ${{report.metadata?.total_nodes || 0}} nodes, ${{report.metadata?.total_edges || 0}} edges`, "info");
                     }} else {{
                         ctx.ui.notify("No graph found. Run /gf build first.", "warning");
                     }}
@@ -542,100 +552,7 @@ eport.metadata?.total_edges || 0}} edges`, "info");
         }},
     }});
 }}
-"#)
-}
-
-/// Generate SKILL.md content
-fn generate_skill_md() -> String {
-    r#"---
-name: garfield
-description: Query Garfield knowledge graph for code architecture. Use when asked about architecture, code relationships, or god nodes.
----
-
-# Garfield Knowledge Graph
-
-Garfield is a Rust-based knowledge graph builder for source code.
-
-## Rules
-
-Before searching files, check if graph exists at `graphify-out/graph.json`.
-
-Use Garfield when:
-- User asks about "architecture", "code structure"
-- User asks about "what connects A to B"
-- User asks about "god nodes", "key classes"
-
-## Tools
-
-```
-gf_build      - Build graph if not exists
-gf_graph_query - Query relationships
-gf_path       - Find path between nodes
-gf_explain    - Explain specific node
-```
-
-## Workflow
-
-```
-1. gf_build (if no graph)
-2. gf_graph_query (ask questions)
-3. gf_path (find connections)
-```
-"#.to_string()
-}
-
-/// Install agent configuration files (AGENTS.md, MCP configs, etc.)
-fn install_agents(agent: &str, force: bool) {
-    use std::fs;
-    
-    println!("gf install agents - Setting up agent configurations\n");
-    
-    let install_claude = agent == "all" || agent == "claude" || agent == "cursor";
-    let install_mcp = agent == "all" || agent == "mcp" || agent == "claude-desktop";
-    
-    // Get current directory
-    let cwd = std::env::current_dir().unwrap_or_default();
-    let graph_json_path = cwd.join("graphify-out/graph.json");
-    let graph_json_absolute = graph_json_path.to_string_lossy().to_string();
-    
-    // Get gf binary path
-    let gf_binary = if cfg!(windows) { "gf.exe" } else { "gf" };
-    
-    if install_claude {
-        let agents_md = cwd.join("AGENTS.md");
-        println!("📝 Installing AGENTS.md...");
-        println!("  Path: {}", agents_md.display());
-        
-        let content = generate_agents_md(gf_binary);
-        
-        if agents_md.exists() && !force {
-            println!("  ⚠️  AGENTS.md already exists (use -f to overwrite)");
-        } else {
-            fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
-            println!("  ✅ AGENTS.md installed!");
-        }
-    }
-    
-    if install_mcp {
-        let mcp_config = cwd.join(".claude_desktop_config.json");
-        println!("\n🔌 Installing MCP config for Claude Desktop...");
-        println!("  Path: {}", mcp_config.display());
-        
-        let content = generate_mcp_config(&graph_json_absolute, gf_binary);
-        
-        if mcp_config.exists() && !force {
-            println!("  ⚠️  .claude_desktop_config.json already exists (use -f to overwrite)");
-        } else {
-            fs::write(&mcp_config, content).expect("Failed to write MCP config");
-            println!("  ✅ MCP config installed!");
-        }
-    }
-    
-    println!("\n✨ Agent configuration complete!");
-    println!("\nSupported agents:");
-    println!("  Claude Code    - Reads AGENTS.md automatically");
-    println!("  Cursor        - Reads AGENTS.md automatically");
-    println!("  Claude Desktop - Uses .claude_desktop_config.json");
+"#, exe_path = exe_path)
 }
 
 /// Generate AGENTS.md content
@@ -682,33 +599,21 @@ Garfield is a fast Rust-based code knowledge graph builder.
 
 - `graphify-out/graph.json` - Knowledge graph
 - `graphify-out/GRAPH_REPORT.md` - Human-readable report
-
-## Integration
-
-Garfield tools are available as:
-- CLI commands (shown above)
-- PI extension (`{gf_binary} install pi`)
-- MCP server (`{gf_binary} serve`)
 "#, gf_binary = gf_binary)
 }
 
 /// Generate Claude Desktop MCP config
 fn generate_mcp_config(graph_json_path: &str, gf_binary: &str) -> String {
-    let config = format!(r#"{{
-  "mcpServers": {{
-    "garfield": {{
-      "command": "{gf_binary}",
-      "args": ["serve", "{graph_json_path}"]
-    }}
-  }}
-}}"#, gf_binary = gf_binary, graph_json_path = graph_json_path);
+    let config = serde_json::json!({
+        "mcpServers": {
+            "garfield": {
+                "command": gf_binary,
+                "args": ["serve", graph_json_path]
+            }
+        }
+    });
     
-    // Format JSON nicely
-    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&config) {
-        serde_json::to_string_pretty(&parsed).unwrap_or(config)
-    } else {
-        config
-    }
+    serde_json::to_string_pretty(&config).unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -724,10 +629,9 @@ mod tests {
     }
     
     #[test]
-    fn test_generate_skill() {
-        let skill = generate_skill_md();
-        assert!(skill.contains("Garfield"));
-        assert!(skill.contains("gf_build"));
+    fn test_generate_mcp_config() {
+        let config = generate_mcp_config("/path/to/graph.json", "gf");
+        assert!(config.contains("garfield"));
+        assert!(config.contains("gf"));
     }
 }
-
