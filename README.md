@@ -1,14 +1,12 @@
-# Garfield - Rust Knowledge Graph Builder
+# Garfield (gf) - Rust Knowledge Graph Builder
 
 A fast, deterministic knowledge graph builder for source code. Port of [graphify](https://github.com/your-org/graphify) from Python to Rust for better performance.
 
-## Features
+## Installation
 
-- **Fast AST extraction** using tree-sitter (248+ languages)
-- **Community detection** using label propagation
-- **Query engine** with BFS/DFS traversal
-- **Incremental builds** with SHA256 caching
-- **JSON export** for agent consumption
+```bash
+cargo install --path .
+```
 
 ## Quick Start
 
@@ -17,6 +15,8 @@ A fast, deterministic knowledge graph builder for source code. Port of [graphify
 cargo build --release
 
 # Run
+./target/release/gf build ./src
+# or
 ./target/release/garfield build ./src
 ```
 
@@ -24,18 +24,18 @@ cargo build --release
 
 ```bash
 # Build knowledge graph
-garfield build <path>          # Full build
-garfield build <path> --update # Incremental build
+gf build <path>          # Full build
+gf build <path> --update # Incremental build
 
 # Query
-garfield query "function_name" # BFS traversal (default)
-garfield query "X" --dfs        # DFS traversal
+gf query "function_name" # BFS traversal (default)
+gf query "X" --dfs       # DFS traversal
 
 # Find paths
-garfield path "A" "B"           # Shortest path A -> B
+gf path "A" "B"          # Shortest path A -> B
 
 # Explain
-garfield explain "NodeName"     # Node details
+gf explain "NodeName"     # Node details
 ```
 
 ## Architecture
