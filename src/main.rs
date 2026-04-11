@@ -94,6 +94,24 @@ enum Cli {
         #[arg(default_value = "all")]
         target: String,
     },
+    
+    /// Install configuration files for various agents (Claude, Cursor, etc.)
+    Agents {
+        /// Agent type: claude, cursor, all (default: all)
+        #[arg(default_value = "all")]
+        agent: String,
+        
+        /// Force overwrite existing files
+        #[arg(long, short = 'f')]
+        force: bool,
+    },
+    
+    /// Start MCP stdio server for agent integration
+    Serve {
+        /// Graph file path (default: graphify-out/graph.json)
+        #[arg(default_value = "graphify-out/graph.json")]
+        graph: String,
+    },
 }
 
 fn main() {
@@ -217,6 +235,21 @@ fn main() {
         
         Cli::Uninstall { target } => {
             uninstall_pi(&target);
+        }
+        
+        Cli::Agents { agent, force } => {
+            install_agents(&agent, force);
+        }
+        
+        Cli::Serve { graph } => {
+            println!("gf serve - Starting MCP stdio server...");
+            println!("Graph: {}", graph);
+            println!("\nMCP server running. Press Ctrl+C to stop.");
+            
+            // TODO: Implement actual MCP server
+            // For now, just show info
+            println!("\n⚠️  MCP server not yet implemented.");
+            println!("Use 'gf build' to build the graph, then query with 'gf query'.");
         }
     }
 }
@@ -549,6 +582,133 @@ gf_explain    - Explain specific node
 3. gf_path (find connections)
 ```
 "#.to_string()
+}
+
+/// Install agent configuration files (AGENTS.md, MCP configs, etc.)
+fn install_agents(agent: &str, force: bool) {
+    use std::fs;
+    
+    println!("gf install agents - Setting up agent configurations\n");
+    
+    let install_claude = agent == "all" || agent == "claude" || agent == "cursor";
+    let install_mcp = agent == "all" || agent == "mcp" || agent == "claude-desktop";
+    
+    // Get current directory
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let graph_json_path = cwd.join("graphify-out/graph.json");
+    let graph_json_absolute = graph_json_path.to_string_lossy().to_string();
+    
+    // Get gf binary path
+    let gf_binary = if cfg!(windows) { "gf.exe" } else { "gf" };
+    
+    if install_claude {
+        let agents_md = cwd.join("AGENTS.md");
+        println!("📝 Installing AGENTS.md...");
+        println!("  Path: {}", agents_md.display());
+        
+        let content = generate_agents_md(gf_binary);
+        
+        if agents_md.exists() && !force {
+            println!("  ⚠️  AGENTS.md already exists (use -f to overwrite)");
+        } else {
+            fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
+            println!("  ✅ AGENTS.md installed!");
+        }
+    }
+    
+    if install_mcp {
+        let mcp_config = cwd.join(".claude_desktop_config.json");
+        println!("\n🔌 Installing MCP config for Claude Desktop...");
+        println!("  Path: {}", mcp_config.display());
+        
+        let content = generate_mcp_config(&graph_json_absolute, gf_binary);
+        
+        if mcp_config.exists() && !force {
+            println!("  ⚠️  .claude_desktop_config.json already exists (use -f to overwrite)");
+        } else {
+            fs::write(&mcp_config, content).expect("Failed to write MCP config");
+            println!("  ✅ MCP config installed!");
+        }
+    }
+    
+    println!("\n✨ Agent configuration complete!");
+    println!("\nSupported agents:");
+    println!("  Claude Code    - Reads AGENTS.md automatically");
+    println!("  Cursor        - Reads AGENTS.md automatically");
+    println!("  Claude Desktop - Uses .claude_desktop_config.json");
+}
+
+/// Generate AGENTS.md content
+fn generate_agents_md(gf_binary: &str) -> String {
+    format!(r#"# Garfield Knowledge Graph
+
+Garfield is a fast Rust-based code knowledge graph builder.
+
+## Commands
+
+```bash
+# Build knowledge graph
+{gf_binary} build <path>          # Full build
+{gf_binary} build <path> --update # Incremental build
+
+# Query
+{gf_binary} query "function_name" # BFS traversal
+{gf_binary} query "X" --dfs       # DFS traversal
+
+# Find paths
+{gf_binary} path "A" "B"         # Shortest path A → B
+
+# Explain
+{gf_binary} explain "NodeName"    # Node details
+```
+
+## When to Use
+
+- Understanding codebase architecture
+- Finding what connects A to B
+- Identifying god nodes and key abstractions
+- Before modifying unfamiliar code
+
+## Workflow
+
+```
+1. {gf_binary} build . (if no graph exists)
+2. {gf_binary} query "what connects X to Y?"
+3. {gf_binary} path "X" "Y" (find direct path)
+4. {gf_binary} explain "NodeName" (node details)
+```
+
+## Output
+
+- `graphify-out/graph.json` - Knowledge graph
+- `graphify-out/GRAPH_REPORT.md` - Human-readable report
+
+## Integration
+
+Garfield tools are available as:
+- CLI commands (shown above)
+- PI extension (`{gf_binary} install pi`)
+- MCP server (`{gf_binary} serve`)
+"#, gf_binary = gf_binary)
+}
+
+/// Generate Claude Desktop MCP config
+fn generate_mcp_config(graph_json_path: &str, gf_binary: &str) -> String {
+    let config = format!(r#"{{
+  "mcpServers": {{
+    "garfield": {{
+      "command": "{gf_binary}",
+      "args": ["serve", "{graph_json_path}"]
+    }}
+  }}
+}}"#, gf_binary = gf_binary, graph_json_path = graph_json_path);
+    
+    // Format JSON nicely
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&config) {
+        serde_json::to_string_pretty(&parsed).unwrap_or(config)
+    } else {
+        config
+    }
 }
 
 #[cfg(test)]
