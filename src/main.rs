@@ -3,7 +3,9 @@
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "garfield")]
+#[command(name = "gf")]
+#[command(aliases = ["garfield"])]
+#[command(long_about = "Build knowledge graph from source code\n\nGarfield is a simplified Rust version of graphify, focusing on code extraction only.")]
 #[command(about = "Build knowledge graph from source code")]
 #[command(version = "0.1.0")]
 enum Cli {
@@ -77,7 +79,7 @@ fn main() {
     
     match cli {
         Cli::Build { path, update, output } => {
-            println!("Garfield v{} - Building graph", env!("CARGO_PKG_VERSION"));
+            println!("gf v{} - Building graph", env!("CARGO_PKG_VERSION"));
             println!("Path: {}", path);
             println!("Output: {}\n", output);
             
