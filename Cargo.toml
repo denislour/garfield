@@ -30,6 +30,11 @@ name = "garfield"
 path = "src/lib.rs"
 
 [[bin]]
+name = "gf"
+path = "src/main.rs"
+
+# Also available as 'garfield' for backwards compatibility
+[[bin]]
 name = "garfield"
 path = "src/main.rs"
 
