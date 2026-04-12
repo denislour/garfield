@@ -17,19 +17,19 @@
 3. `global` - 18 edges
    📁 ./src/lib.rs · source: lib:global
 4. `global` - 11 edges
-   📁 ./src/serve.rs · source: serve:global
-5. `global` - 11 edges
    📁 ./src/detect.rs · source: detect:global
+5. `global` - 11 edges
+   📁 ./src/serve.rs · source: serve:global
 6. `global` - 9 edges
-   📁 ./src/main.rs · source: main:global
-7. `global` - 9 edges
    📁 ./src/cache.rs · source: cache:global
+7. `global` - 9 edges
+   📁 ./src/main.rs · source: main:global
 8. `global` - 7 edges
    📁 ./src/community.rs · source: community:global
 9. `global` - 6 edges
-   📁 ./src/build.rs · source: build:global
-10. `global` - 6 edges
    📁 ./src/summary.rs · source: summary:global
+10. `global` - 6 edges
+   📁 ./src/build.rs · source: build:global
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -54,12 +54,12 @@
 ### 4 "Src" (12 nodes) 🔴
 **Cohesion:** 0.17
 
-**Key concepts:** Some, bfs, build_adjacency, create_test_graph, dfs, find_edge, find_shortest_path, get_node, global, graph_stats
+**Key concepts:** Some, classify_extension, count_words, estimate_word_count, get_stats, glob_to_regex, global, is_ignored, is_noise_dir, is_sensitive
 
 ### 3 "Src" (12 nodes) 🔴
 **Cohesion:** 0.17
 
-**Key concepts:** Some, classify_extension, count_words, estimate_word_count, get_stats, glob_to_regex, global, is_ignored, is_noise_dir, is_sensitive
+**Key concepts:** Some, bfs, build_adjacency, create_test_graph, dfs, find_edge, find_shortest_path, get_node, global, graph_stats
 
 ### 5 "Src" (10 nodes) 🟡
 **Cohesion:** 0.20
@@ -102,8 +102,8 @@ These have ≤1 connection - possible documentation gaps:
 
 Too small to be meaningful - may be noise:
 
-- `Src` (14 nodes)
 - `Src` (13 nodes)
+- `Src` (14 nodes)
 
 ## 💡 Suggested Questions
 
@@ -149,5 +149,5 @@ Questions the graph is uniquely positioned to answer:
 
 **Q:** Should `Src` be split into smaller, more focused modules?
 
-**Why:** Cohesion score 0.09 - nodes in this community are weakly interconnected.
+**Why:** Cohesion score 0.10 - nodes in this community are weakly interconnected.
 

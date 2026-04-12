@@ -74,6 +74,15 @@ enum Cli {
         graph: String,
     },
 
+    /// Get body (source code) of a function/method
+    /// 
+    /// TIER 3: Reads directly from source files
+    Body {
+        /// Node ID (format: file_stem:function_name)
+        /// Example: serve:find_shortest_path
+        node_id: String,
+    },
+
     /// Install agent integration (pi, claude, cursor)
     Agent {
         /// Install agent: pi, claude, cursor
@@ -236,6 +245,23 @@ fn main() {
                 }
                 Err(e) => {
                     eprintln!("Error loading graph: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        Cli::Body { node_id } => {
+            println!("Getting body for: {}\n", node_id);
+            println!("Reading from source files (TIER 3)...\n");
+
+            match garfield::get_node_body(&node_id) {
+                Some(body) => {
+                    println!("{}", body);
+                }
+                None => {
+                    eprintln!("❌ Could not find body for: {}", node_id);
+                    eprintln!("  Make sure the node ID is correct (format: file_stem:function_name)");
+                    eprintln!("  Example: garfield body serve:find_shortest_path");
                     std::process::exit(1);
                 }
             }

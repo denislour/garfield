@@ -658,6 +658,127 @@ pub fn format_graph_stats(stats: &GraphStats) -> String {
     lines.join("\n")
 }
 
+/// Get node body (TIER 3) - reads directly from source files
+/// 
+/// Parse node ID to extract file_stem and function name,
+/// then read the source file and extract the function body.
+pub fn get_node_body(node_id: &str) -> Option<String> {
+    // Parse ID: format is "file_stem:function_name" or "file_stem:ClassName::method"
+    let parts: Vec<&str> = node_id.split(':').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    
+    let file_stem = parts[0];
+    let name = parts[1..].join(":"); // Handle "Class::method" format
+    
+    // Find source file by file_stem
+    let source_file = find_source_file(file_stem)?;
+    
+    // Read source file
+    let content = match std::fs::read_to_string(&source_file) {
+        Ok(c) => c,
+        Err(_) => return None,
+    };
+    
+    // Extract function/method body
+    extract_function_body(&content, &name)
+}
+
+/// Find source file path by file_stem
+fn find_source_file(file_stem: &str) -> Option<std::path::PathBuf> {
+    // Search in common locations
+    let search_dirs = [
+        "./src",
+        ".",
+        "src",
+    ];
+    
+    let extensions = ["rs", "py", "ts", "js", "go", "java"];
+    
+    for dir in &search_dirs {
+        for ext in &extensions {
+            let path = std::path::Path::new(dir).join(format!("{}.{}", file_stem, ext));
+            if path.exists() {
+                return Some(path);
+            }
+            
+            // Try with raw/ prefix (for graphify style)
+            let raw_path = std::path::Path::new(dir).join("raw").join(format!("{}.{}", file_stem, ext));
+            if raw_path.exists() {
+                return Some(raw_path);
+            }
+        }
+    }
+    
+    None
+}
+
+/// Extract function body from source content
+fn extract_function_body(content: &str, fn_name: &str) -> Option<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    
+    // Try to find function definition
+    let search_patterns = [
+        format!("fn {}", fn_name),
+        format!("pub fn {}", fn_name),
+        format!("def {}", fn_name),
+        format!("func {}", fn_name),
+        format!("func ({}", fn_name), // TypeScript/Go style
+    ];
+    
+    let mut start_line = None;
+    for (i, line) in lines.iter().enumerate() {
+        for pattern in &search_patterns {
+            if line.contains(pattern.as_str()) {
+                start_line = Some(i);
+                break;
+            }
+        }
+        if start_line.is_some() {
+            break;
+        }
+    }
+    
+    let start = start_line?;
+    
+    // Find end of function (matching brace)
+    let mut brace_count = 0;
+    let mut in_function = false;
+    let mut end_line = start;
+    
+    for i in start..lines.len() {
+        let line = lines[i];
+        for c in line.chars() {
+            match c {
+                '{' | '(' => {
+                    brace_count += 1;
+                    in_function = true;
+                }
+                '}' | ')' => {
+                    brace_count -= 1;
+                }
+                _ => {}
+            }
+        }
+        if in_function && brace_count <= 0 {
+            end_line = i;
+            break;
+        }
+        end_line = i;
+    }
+    
+    // Extract and return function body
+    let body: String = lines[start..=end_line.min(lines.len() - 1)]
+        .iter()
+        .enumerate()
+        .map(|(i, l)| format!("{:4}| {}", "", l))
+        .collect::<Vec<_>>()
+        .join("\n");
+    
+    Some(body)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -751,5 +872,29 @@ mod tests {
         assert_eq!(stats.total_edges, 3);
         assert_eq!(stats.confidence_breakdown.extracted, 2);
         assert_eq!(stats.confidence_breakdown.inferred, 1);
+    }
+
+    #[test]
+    fn test_get_node_body() {
+        // Test with actual function from serve.rs
+        let body = get_node_body("serve:find_shortest_path");
+        assert!(body.is_some());
+        let body = body.unwrap();
+        assert!(body.contains("fn find_shortest_path"));
+        assert!(body.contains("pub fn"));
+    }
+
+    #[test]
+    fn test_get_node_body_nonexistent() {
+        let body = get_node_body("nonexistent:function");
+        assert!(body.is_none());
+    }
+
+    #[test]
+    fn test_find_source_file() {
+        let path = find_source_file("serve");
+        assert!(path.is_some());
+        let path = path.unwrap();
+        assert!(path.to_string_lossy().contains("serve"));
     }
 }
