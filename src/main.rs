@@ -10,7 +10,7 @@ use clap::Parser;
 #[command(about = "Build knowledge graph from source code")]
 #[command(version = "0.1.0")]
 enum Cli {
-    /// Build graph từ source code
+    /// Build graph from source code
     Build {
         /// Path to analyze
         #[arg(default_value = ".")]

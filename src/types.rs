@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Confidence level của một edge
+/// Confidence level of an edge
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Confidence {
@@ -11,7 +11,7 @@ pub enum Confidence {
     Ambiguous,
 }
 
-/// Một node trong graph
+/// A node in the graph
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
     pub id: String,
@@ -47,7 +47,7 @@ impl Node {
     }
 }
 
-/// Một edge trong graph
+/// An edge in the graph
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge {
     pub source: String,
@@ -140,7 +140,7 @@ impl Hyperedge {
     }
 }
 
-/// Kết quả extract từ một file
+/// Extraction result from a file
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ExtractionResult {
     pub nodes: Vec<Node>,

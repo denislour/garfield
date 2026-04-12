@@ -22,7 +22,7 @@ fn dedup_edges(edges: Vec<Edge>) -> Vec<Edge> {
     result
 }
 
-/// Build graph từ extraction results
+/// Build graph from extraction results
 pub fn build_graph(extractions: Vec<ExtractionResult>) -> GraphData {
     let mut nodes: Vec<Node> = Vec::new();
     let mut edges: Vec<Edge> = Vec::new();
