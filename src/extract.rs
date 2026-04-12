@@ -325,20 +325,6 @@ fn extract_docstrings(
 
 /// Get class name and body node (for backward compatibility)
 #[allow(dead_code)]
-fn get_class_name_and_body(node: &TsNode, source: &[u8]) -> Option<(String, String)> {
-    let name = node.child_by_field_name("name")
-        .and_then(|n| extract_text(&n, source))?;
-    Some((name, "body".to_string()))
-}
-
-/// Get function name and body node (for backward compatibility)
-#[allow(dead_code)]
-fn get_function_name_and_body(node: &TsNode, source: &[u8]) -> Option<(String, String)> {
-    let name = node.child_by_field_name("name")
-        .and_then(|n| extract_text(&n, source))?;
-    Some((name, "body".to_string()))
-}
-
 /// Extract docstring from a body node
 fn extract_docstring_from_body(body: &TsNode, source: &[u8]) -> Option<(String, usize)> {
     let mut cursor = body.walk();
