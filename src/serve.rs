@@ -772,7 +772,7 @@ fn extract_function_body(content: &str, fn_name: &str) -> Option<String> {
     let body: String = lines[start..=end_line.min(lines.len() - 1)]
         .iter()
         .enumerate()
-        .map(|(i, l)| format!("{:4}| {}", "", l))
+        .map(|(_i, l)| format!("{:4}| {}", "", l))
         .collect::<Vec<_>>()
         .join("\n");
     

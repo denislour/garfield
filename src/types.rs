@@ -29,9 +29,6 @@ pub struct Node {
     /// File stem (module name)
     #[serde(default)]
     pub file_stem: Option<String>,
-    /// Summary (TIER 2) - brief description of function/variable
-    #[serde(default)]
-    pub summary: Option<String>,
 }
 
 impl Node {
@@ -46,7 +43,6 @@ impl Node {
             node_type: None,
             file_type: None,
             file_stem: None,
-            summary: None,
         }
     }
 }

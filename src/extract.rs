@@ -323,7 +323,6 @@ fn extract_python_rationale(
                             community: None,
                             node_type: Some("rationale".to_string()),
                             file_stem: Some(ctx.file_stem.clone()),
-                            summary: Some(truncated),
                         };
                         
                         // Connect to file node (module-level rationale)
@@ -486,7 +485,6 @@ fn create_rationale_node(
             community: None,
             node_type: Some("docstring".to_string()),
             file_stem: Some(ctx.file_stem.clone()),
-            summary: Some(truncated),
         };
         
         // Connect to the entity (file_stem:name for classes/functions)
