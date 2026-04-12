@@ -1,4 +1,4 @@
-# Garfield (gf) - Rust Knowledge Graph Builder
+# Garfield - Rust Knowledge Graph Builder
 
 A fast, deterministic knowledge graph builder for source code. Port of [graphify](https://github.com/your-org/graphify) from Python to Rust for better performance.
 
@@ -7,25 +7,27 @@ A fast, deterministic knowledge graph builder for source code. Port of [graphify
 ### Option 1: Build and run locally
 ```bash
 cargo build --release
-./target/release/gf build ./src
-# or
 ./target/release/garfield build ./src
+# or with alias
+./target/release/garf build ./src
 ```
 
 ### Option 2: Install globally
 ```bash
 cargo install --path .
-gf --help  # Available globally
+garfield --help  # Available globally
+# or with alias
+garf --help
 ```
 
 ### Option 3: Agent integrations
 ```bash
 # PI agent
-gf agent pi
+garfield agent pi
 
 # Claude Code / Cursor
-gf agent claude
-gf agent cursor
+garfield agent claude
+garfield agent cursor
 ```
 
 ## Quick Start
@@ -33,29 +35,36 @@ gf agent cursor
 ```bash
 # Build
 cargo build --release
-
-# Run
-./target/release/gf build ./src
-# or
 ./target/release/garfield build ./src
+
+# Query
+./target/release/garfield query "function_name"
+
+# Find path
+./target/release/garfield path "Source" "Target"
 ```
 
 ## CLI Commands
 
 ```bash
 # Build knowledge graph
-gf build <path>          # Full build
-gf build <path> --update # Incremental build
+garfield build <path>          # Full build
+garfield build <path> --update # Incremental build
 
 # Query
-gf query "function_name" # BFS traversal (default)
-gf query "X" --dfs       # DFS traversal
+garfield query "function_name" # BFS traversal (default)
+garfield query "X" --dfs       # DFS traversal
 
 # Find paths
-gf path "A" "B"          # Shortest path A -> B
+garfield path "A" "B"          # Shortest path A -> B
 
 # Explain
-gf explain "NodeName"     # Node details
+garfield explain "NodeName"     # Node details
+
+# Agent integrations
+garfield agent pi              # Install PI extension + skill
+garfield agent claude          # Claude Code integration
+garfield agent cursor          # Cursor IDE integration
 ```
 
 ## Architecture
@@ -140,10 +149,10 @@ fn main() {
 | Community detection | ✓ | ✓ |
 | BFS/DFS query | ✓ | ✓ |
 | Incremental cache | ✓ | ✓ |
-| MCP server | ✓ | CLI only |
 | LLM integration | ✓ | ✗ |
+| Video/Audio | ✓ | ✗ |
 
-Garfield is **code-only extraction** - no LLM, MCP, video/audio, or Neo4j.
+Garfield is **code-only extraction** - no LLM, video/audio, or Neo4j.
 
 ## Testing
 

@@ -22,7 +22,7 @@ Garfield is a fast Rust-based code knowledge graph builder. It extracts code str
 When answering architecture questions or exploring codebase structure:
 
 1. **First**: Check if `graphify-out/graph.json` exists
-2. **If not**: Run `gf build <path>` to build the graph
+2. **If not**: Run `garfield build <path>` to build the graph
 3. **Then**: Use `/gf query` to understand connections
 
 ### When to Use Garfield
@@ -43,14 +43,14 @@ When answering architecture questions or exploring codebase structure:
 
 ```
 User: "Giới thiệu về codebase"
-→ gf build . (if graph doesn't exist)
-→ gf report (show GRAPH_REPORT.md)
+→ garfield build . (if graph doesn't exist)
+→ /gf report (show GRAPH_REPORT.md)
 → Understand god nodes and structure
 → Answer based on graph data
 
 User: "Logic của create order là gì?"
-→ gf query "what does CreateOrderService connect to?"
-→ gf path "CreateOrderService" "InsertOrderDetailService"
+→ /gf query "what does CreateOrderService connect to?"
+→ /gf path "CreateOrderService" "InsertOrderDetailService"
 → Then search specific files for implementation
 ```
 
@@ -61,12 +61,12 @@ User: "Logic của create order là gì?"
 Build graph if it doesn't exist or needs updating.
 
 ```bash
-# Detect the correct garfield binary
-GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null)
-if [ -z "$GF_BIN" ]; then
+# Detect the garfield binary
+GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null)
+if [ -z "$GARFIELD_BIN" ]; then
     # Try to find in project directory
-    GF_BIN="./target/release/gf"
-    if [ ! -f "$GF_BIN" ]; then
+    GARFIELD_BIN="./target/release/garfield"
+    if [ ! -f "$GARFIELD_BIN" ]; then
         echo "ERROR: Garfield not found. Build with: cargo build --release"
         exit 1
     fi
@@ -75,7 +75,7 @@ fi
 # Ensure graphify-out directory exists
 mkdir -p graphify-out
 
-"$GF_BIN" build PATH
+"$GARFIELD_BIN" build PATH
 ```
 
 Replace PATH with the actual path. If no path given, use `.` (current directory).
@@ -95,12 +95,12 @@ After build, present the summary:
 Query the knowledge graph using BFS or DFS traversal.
 
 ```bash
-GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
 GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
 
 # Check if graph exists
 if [ ! -f "$GRAPH_PATH" ]; then
-    echo "ERROR: No graph found. Run 'gf build .' first."
+    echo "ERROR: No graph found. Run 'garfield build .' first."
     exit 1
 fi
 
@@ -109,7 +109,7 @@ MODE="bfs"  # or 'dfs'
 DEPTH=3
 BUDGET=2000
 
-"$GF_BIN" query "$QUESTION" --$MODE --depth $DEPTH --budget $BUDGET --graph "$GRAPH_PATH"
+"$GARFIELD_BIN" query "$QUESTION" --$MODE --depth $DEPTH --budget $BUDGET --graph "$GRAPH_PATH"
 ```
 
 Two traversal modes:
@@ -128,12 +128,12 @@ After query, present results. Answer using **only** what the graph contains. Quo
 Find the shortest path between two named concepts in the graph.
 
 ```bash
-GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
 GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
 
 # Check if graph exists
 if [ ! -f "$GRAPH_PATH" ]; then
-    echo "ERROR: No graph found. Run 'gf build .' first."
+    echo "ERROR: No graph found. Run 'garfield build .' first."
     exit 1
 fi
 
@@ -141,7 +141,7 @@ SOURCE_NODE="NodeA"
 TARGET_NODE="NodeB"
 MAX_HOPS=8
 
-"$GF_BIN" path "$SOURCE_NODE" "$TARGET_NODE" --max-hops $MAX_HOPS --graph "$GRAPH_PATH"
+"$GARFIELD_BIN" path "$SOURCE_NODE" "$TARGET_NODE" --max-hops $MAX_HOPS --graph "$GRAPH_PATH"
 ```
 
 After path, explain in plain language - what each hop means, why it's significant.
@@ -153,18 +153,18 @@ After path, explain in plain language - what each hop means, why it's significan
 Give a plain-language explanation of a single node - everything connected to it.
 
 ```bash
-GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
 GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
 
 # Check if graph exists
 if [ ! -f "$GRAPH_PATH" ]; then
-    echo "ERROR: No graph found. Run 'gf build .' first."
+    echo "ERROR: No graph found. Run 'garfield build .' first."
     exit 1
 fi
 
 NODE_NAME="NodeName"
 
-"$GF_BIN" explain "$NODE_NAME" --graph "$GRAPH_PATH"
+"$GARFIELD_BIN" explain "$NODE_NAME" --graph "$GRAPH_PATH"
 ```
 
 Then write a 3-5 sentence explanation of what this node is, what it connects to, and why those connections are significant.
@@ -179,7 +179,7 @@ Show the human-readable GRAPH_REPORT.md.
 if [ -f "graphify-out/GRAPH_REPORT.md" ]; then
     cat graphify-out/GRAPH_REPORT.md
 else
-    echo "No report found. Run 'gf build .' first."
+    echo "No report found. Run 'garfield build .' first."
 fi
 ```
 
@@ -190,14 +190,14 @@ fi
 To keep the knowledge graph current:
 
 ```bash
-GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
 
 # Incremental update (fast, only changed files)
-"$GF_BIN" build . --update
+"$GARFIELD_BIN" build . --update
 
 # Or rebuild from scratch
 rm -rf graphify-out/
-"$GF_BIN" build .
+"$GARFIELD_BIN" build .
 ```
 
 ---
@@ -219,6 +219,6 @@ rm -rf graphify-out/
 | Incremental cache | ✓ | ✓ |
 | LLM integration | ✓ | ✗ |
 | Video/Audio | ✓ | ✗ |
-| MCP server | ✓ | Via gf binary |
+| MCP server | ✓ | Via garfield binary |
 
 Garfield is **code-only extraction** - no LLM, MCP, video/audio, or Neo4j.

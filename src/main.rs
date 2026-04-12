@@ -3,8 +3,7 @@
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "gf")]
-#[command(aliases = ["garfield"])]
+#[command(name = "garfield")]
 #[command(long_about = "Build knowledge graph from source code\n\nGarfield is a simplified Rust version of graphify, focusing on code extraction only.")]
 #[command(about = "Build knowledge graph from source code")]
 #[command(version = "0.1.0")]
