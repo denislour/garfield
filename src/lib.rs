@@ -9,6 +9,7 @@ pub mod community;
 pub mod detect;
 pub mod export;
 pub mod extract;
+pub mod hyperedge;
 pub mod lang;
 pub mod leiden;
 pub mod report;
@@ -37,6 +38,7 @@ pub use serve::{
     graph_stats, format_graph_stats, get_node_body, NodeDetails, CommunityInfo, GraphStats,
 };
 pub use lang::{LangConfig, LANG_CONFIGS, get_ts_language, get_extension_lang};
+pub use hyperedge::detect_hyperedges;
 pub use types::{
     BuildSummary, CommunityResult, Confidence, DetectStats, DetectedFile, Edge, ExtractionResult,
     FileType, GraphData, GraphMetadata, Hyperedge, Node,
