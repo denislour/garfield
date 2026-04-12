@@ -1,28 +1,36 @@
 ---
 name: garfield
-description: Query Garfield knowledge graph for code architecture. Use when asked about architecture, god nodes, code relationships, or community structure in Garfield projects.
+description: Garfield knowledge graph for code architecture. Use when asked about architecture, code relationships, god nodes, or community structure.
+trigger: /gf
 ---
 
-# Garfield Knowledge Graph
+# /gf - Garfield Knowledge Graph
 
-Garfield is a Rust-based knowledge graph builder for source code. It extracts code structure using tree-sitter (248+ languages).
+Garfield is a fast Rust-based code knowledge graph builder. It extracts code structure using tree-sitter (248+ languages) and provides BFS/DFS query, shortest path, and community detection.
+
+## What Garfield is for
+
+- Understanding codebase architecture before touching code
+- Finding what connects A to B
+- Identifying god nodes and key abstractions
+- Starting a new session to understand unfamiliar code
 
 ## Rules
 
 ### Before Searching Files
 
-When working with Garfield projects:
+When answering architecture questions or exploring codebase structure:
 
 1. **First**: Check if `graphify-out/graph.json` exists
 2. **If not**: Run `gf build <path>` to build the graph
-3. **Then**: Use Garfield tools to understand code relationships
+3. **Then**: Use `/gf query` to understand connections
 
 ### When to Use Garfield
 
 - User asks about "architecture", "code structure", "how does X work"
-- User asks about "what connects A to B"
 - User asks about "god nodes", "key classes", "core abstractions"
-- Starting a new session to understand a Garfield codebase
+- User asks about "what connects A to B"
+- Starting a new session to understand a codebase
 - Before searching raw files for structural questions
 
 ### When to Search Directly
@@ -31,39 +39,7 @@ When working with Garfield projects:
 - After understanding structure via Garfield, finding actual code
 - Simple file lookups that don't need context
 
-## Garfield Tools
-
-Use the following tools in sequence:
-
-```
-1. gf_build     - Build graph if not exists
-2. gf_graph_query - Query relationships
-3. gf_path      - Find path between nodes
-4. gf_explain   - Explain specific node
-```
-
-## Commands
-
-```bash
-# Build knowledge graph
-gf build <path>          # Full build
-gf build <path> --update # Incremental build
-
-# Query (via /gf command)
-gf query "what does X connect to?"     # BFS traversal (default)
-gf query "X" --dfs                     # DFS traversal
-
-# Find paths
-gf path "SourceNode" "TargetNode"     # Shortest path A -> B
-
-# Explain
-gf explain "NodeName"                  # Node details
-
-# Show report
-gf report                              # GRAPH_REPORT.md content
-```
-
-## Workflow Example
+## Workflow
 
 ```
 User: "Giới thiệu về codebase"
@@ -73,15 +49,165 @@ User: "Giới thiệu về codebase"
 → Answer based on graph data
 
 User: "Logic của create order là gì?"
-→ gf graph_query "what does CreateOrderService connect to?"
+→ gf query "what does CreateOrderService connect to?"
 → gf path "CreateOrderService" "InsertOrderDetailService"
 → Then search specific files for implementation
 ```
+
+---
+
+## /gf build - Build Knowledge Graph
+
+Build graph if it doesn't exist or needs updating.
+
+```bash
+# Detect the correct garfield binary
+GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null)
+if [ -z "$GF_BIN" ]; then
+    # Try to find in project directory
+    GF_BIN="./target/release/gf"
+    if [ ! -f "$GF_BIN" ]; then
+        echo "ERROR: Garfield not found. Build with: cargo build --release"
+        exit 1
+    fi
+fi
+
+# Ensure graphify-out directory exists
+mkdir -p graphify-out
+
+"$GF_BIN" build PATH
+```
+
+Replace PATH with the actual path. If no path given, use `.` (current directory).
+
+After build, present the summary:
+```
+✅ Graph built successfully
+  Nodes: N
+  Edges: M
+  Communities: C
+```
+
+---
+
+## /gf query - Query the Graph
+
+Query the knowledge graph using BFS or DFS traversal.
+
+```bash
+GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
+
+# Check if graph exists
+if [ ! -f "$GRAPH_PATH" ]; then
+    echo "ERROR: No graph found. Run 'gf build .' first."
+    exit 1
+fi
+
+QUESTION="QUESTION_TEXT"
+MODE="bfs"  # or 'dfs'
+DEPTH=3
+BUDGET=2000
+
+"$GF_BIN" query "$QUESTION" --$MODE --depth $DEPTH --budget $BUDGET --graph "$GRAPH_PATH"
+```
+
+Two traversal modes:
+
+| Mode | Flag | Best for |
+|------|------|----------|
+| BFS (default) | _(none)_ | "What is X connected to?" - broad context, nearest neighbors first |
+| DFS | `--dfs` | "How does X reach Y?" - trace a specific path |
+
+After query, present results. Answer using **only** what the graph contains. Quote `source_location` when citing a specific fact.
+
+---
+
+## /gf path - Find Shortest Path
+
+Find the shortest path between two named concepts in the graph.
+
+```bash
+GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
+
+# Check if graph exists
+if [ ! -f "$GRAPH_PATH" ]; then
+    echo "ERROR: No graph found. Run 'gf build .' first."
+    exit 1
+fi
+
+SOURCE_NODE="NodeA"
+TARGET_NODE="NodeB"
+MAX_HOPS=8
+
+"$GF_BIN" path "$SOURCE_NODE" "$TARGET_NODE" --max-hops $MAX_HOPS --graph "$GRAPH_PATH"
+```
+
+After path, explain in plain language - what each hop means, why it's significant.
+
+---
+
+## /gf explain - Explain a Node
+
+Give a plain-language explanation of a single node - everything connected to it.
+
+```bash
+GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
+
+# Check if graph exists
+if [ ! -f "$GRAPH_PATH" ]; then
+    echo "ERROR: No graph found. Run 'gf build .' first."
+    exit 1
+fi
+
+NODE_NAME="NodeName"
+
+"$GF_BIN" explain "$NODE_NAME" --graph "$GRAPH_PATH"
+```
+
+Then write a 3-5 sentence explanation of what this node is, what it connects to, and why those connections are significant.
+
+---
+
+## /gf report - Show Graph Report
+
+Show the human-readable GRAPH_REPORT.md.
+
+```bash
+if [ -f "graphify-out/GRAPH_REPORT.md" ]; then
+    cat graphify-out/GRAPH_REPORT.md
+else
+    echo "No report found. Run 'gf build .' first."
+fi
+```
+
+---
+
+## After Code Changes
+
+To keep the knowledge graph current:
+
+```bash
+GF_BIN=$(which gf 2>/dev/null || which garfield 2>/dev/null || ./target/release/gf)
+
+# Incremental update (fast, only changed files)
+"$GF_BIN" build . --update
+
+# Or rebuild from scratch
+rm -rf graphify-out/
+"$GF_BIN" build .
+```
+
+---
 
 ## Output Files
 
 - `graphify-out/graph.json` - Knowledge graph in JSON format
 - `graphify-out/GRAPH_REPORT.md` - Human-readable report
+
+---
 
 ## Garfield vs Graphify
 
@@ -92,7 +218,7 @@ User: "Logic của create order là gì?"
 | BFS/DFS query | ✓ | ✓ |
 | Incremental cache | ✓ | ✓ |
 | LLM integration | ✓ | ✗ |
-| MCP server | ✓ | CLI only |
 | Video/Audio | ✓ | ✗ |
+| MCP server | ✓ | Via gf binary |
 
 Garfield is **code-only extraction** - no LLM, MCP, video/audio, or Neo4j.

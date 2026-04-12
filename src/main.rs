@@ -82,13 +82,6 @@ enum Cli {
         #[arg(long, short = 'f')]
         force: bool,
     },
-    
-    /// Start MCP stdio server for agent integration
-    Serve {
-        /// Graph file path (default: graphify-out/graph.json)
-        #[arg(default_value = "graphify-out/graph.json")]
-        graph: String,
-    },
 }
 
 fn main() {
@@ -208,15 +201,6 @@ fn main() {
         
         Cli::Agent { name, force } => {
             install_agent(&name, force);
-        }
-        
-        Cli::Serve { graph } => {
-            println!("gf serve - Starting MCP stdio server...");
-            println!("Graph: {}", graph);
-            println!("\nMCP server running. Press Ctrl+C to stop.");
-            
-            println!("\n⚠️  MCP server not yet implemented.");
-            println!("Use 'gf build' to build the graph, then query with 'gf query'.");
         }
     }
 }

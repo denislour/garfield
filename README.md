@@ -4,8 +4,28 @@ A fast, deterministic knowledge graph builder for source code. Port of [graphify
 
 ## Installation
 
+### Option 1: Build and run locally
+```bash
+cargo build --release
+./target/release/gf build ./src
+# or
+./target/release/garfield build ./src
+```
+
+### Option 2: Install globally
 ```bash
 cargo install --path .
+gf --help  # Available globally
+```
+
+### Option 3: Agent integrations
+```bash
+# PI agent
+gf agent pi
+
+# Claude Code / Cursor
+gf agent claude
+gf agent cursor
 ```
 
 ## Quick Start
