@@ -622,6 +622,7 @@ dependencies = [
  "clap",
  "config",
  "dirs 5.0.1",
+ "fastrand",
  "rayon",
  "regex",
  "reqwest",

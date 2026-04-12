@@ -7,6 +7,7 @@ pub mod build;
 pub mod cache;
 pub mod cluster;
 pub mod detect;
+pub mod leiden;
 pub mod export;
 pub mod extract;
 pub mod report;

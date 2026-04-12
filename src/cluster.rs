@@ -1,9 +1,10 @@
-//! Community detection module using Louvain algorithm (matches Graphify quality)
+//! Community detection module using Leiden algorithm
 
+use crate::leiden::leiden_communities;
 use crate::types::{CommunityResult, Confidence, GraphData};
 use std::collections::{HashMap, HashSet};
 
-/// Detect communities using Louvain algorithm (same as Graphify)
+/// Detect communities using Leiden algorithm
 pub fn cluster(graph: &GraphData) -> CommunityResult {
     let n = graph.nodes.len();
 
@@ -36,8 +37,8 @@ pub fn cluster(graph: &GraphData) -> CommunityResult {
         }
     }
 
-    // Run Louvain clustering
-    let assignments = louvain_communities(n, &edges);
+    // Run Leiden clustering
+    let assignments = leiden_communities(n, &edges);
 
     // Calculate community sizes
     let mut community_sizes: HashMap<u32, usize> = HashMap::new();
@@ -63,98 +64,6 @@ pub fn cluster(graph: &GraphData) -> CommunityResult {
         cohesion_scores,
         community_sizes,
     }
-}
-
-/// Louvain community detection algorithm
-/// Optimizes modularity: Q = sum_over_communities (e_ii/m - (k_i/m)^2)
-/// Returns community assignment for each node (node_idx -> community_id)
-fn louvain_communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<u32> {
-    if n == 0 {
-        return vec![];
-    }
-
-    // Self-loops for total edge weight m
-    let m: f64 = edges.iter().map(|(_, _, w)| w).sum::<f64>() * 2.0;
-    if m == 0.0 {
-        // No edges - each node is its own community
-        return (0..n as u32).collect();
-    }
-
-    // Initialize: each node in its own community
-    let mut community: Vec<u32> = (0..n as u32).collect();
-
-    // Phase 1: Move nodes to maximize modularity gain
-    let mut improved = true;
-    let mut pass = 0;
-    let max_passes = 10;
-
-    while improved && pass < max_passes {
-        improved = false;
-        pass += 1;
-
-        for node in 0..n {
-            let current_comm = community[node];
-
-            // Calculate sum of weights to neighbors by community
-            let mut comm_weights: HashMap<u32, f64> = HashMap::new();
-            let mut k_i = 0.0;
-
-            for (src, tgt, weight) in edges {
-                if *src == node {
-                    k_i += weight;
-                    *comm_weights.entry(community[*tgt]).or_insert(0.0) += weight;
-                } else if *tgt == node {
-                    k_i += weight;
-                    *comm_weights.entry(community[*src]).or_insert(0.0) += weight;
-                }
-            }
-
-            // Current community contribution
-            let _current_contribution = *comm_weights.get(&current_comm).unwrap_or(&0.0);
-
-            // Find best community to move to
-            let mut best_comm = current_comm;
-            let mut best_delta = 0.0;
-
-            for (comm, &weight_to_comm) in &comm_weights {
-                if *comm == current_comm {
-                    continue;
-                }
-
-                // Modularity gain formula:
-                // delta_Q = (weight_to_comm / m) - (k_i * sigma_tot[comm]) / (m^2)
-                // where sigma_tot[comm] is sum of degrees to nodes in that community
-                // Simplified: we look for max weight_to_comm since k_i and m are constant for node
-                if weight_to_comm > best_delta {
-                    best_delta = weight_to_comm;
-                    best_comm = *comm;
-                }
-            }
-
-            // Move node if it improves modularity
-            if best_comm != current_comm {
-                community[node] = best_comm;
-                improved = true;
-            }
-        }
-    }
-
-    // Renumber communities to 0..k (sorted by size descending)
-    let mut comm_counts: HashMap<u32, usize> = HashMap::new();
-    for &c in &community {
-        *comm_counts.entry(c).or_insert(0) += 1;
-    }
-
-    // Sort by count descending
-    let mut comms: Vec<(u32, usize)> = comm_counts.into_iter().collect();
-    comms.sort_by(|a, b| b.1.cmp(&a.1));
-
-    let mut comm_map: HashMap<u32, u32> = HashMap::new();
-    for (new_id, (old_id, _)) in comms.iter().enumerate() {
-        comm_map.insert(*old_id, new_id as u32);
-    }
-
-    community.iter().map(|c| comm_map[c]).collect()
 }
 
 /// Calculate cohesion score for each community
@@ -271,13 +180,13 @@ pub fn split_oversized(graph: &mut GraphData, max_size: usize) {
             })
             .collect();
 
-        // Run Louvain on subgraph
+        // Run Leiden on subgraph
         let n = subgraph_node_ids.len();
         if n == 0 || subgraph_edges.is_empty() {
             continue;
         }
 
-        let sub_assignments = louvain_communities(n, &subgraph_edges);
+        let sub_assignments = leiden_communities(n, &subgraph_edges);
 
         // Count sub-communities
         let sub_communities: HashSet<u32> = sub_assignments.iter().copied().collect();
