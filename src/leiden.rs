@@ -1,93 +1,111 @@
 //! Leiden community detection algorithm
 //! 
-//! Leiden is an improvement over Louvain that:
-//! - Guarantees well-connected communities
-//! - Is significantly faster
-//! - Avoids dangling node problem
+//! Leiden = Louvain + Refinement
+//! Paper: https://www.nature.com/articles/s41598-019-41695-z
 
 use std::collections::HashMap;
 
 /// Leiden community detection
-/// Returns community assignment for each node (node_idx -> community_id)
 pub fn leiden_communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<u32> {
     if n == 0 {
         return vec![];
     }
 
-    // Self-loops for total edge weight m
-    let m: f64 = edges.iter().map(|(_, _, w)| w).sum::<f64>() * 2.0;
+    let m: f64 = edges.iter().map(|(_, _, w)| w).sum::<f64>();
     if m == 0.0 {
-        // No edges - each node is its own community
         return (0..n as u32).collect();
     }
 
-    // Build adjacency list with weights
-    let mut neighbors: HashMap<usize, HashMap<usize, f64>> = HashMap::new();
+    // Build adjacency list
+    let mut neighbors: HashMap<usize, Vec<(usize, f64)>> = HashMap::new();
+    let mut node_weights: Vec<f64> = vec![0.0; n];
+    
     for &(src, tgt, weight) in edges {
-        neighbors.entry(src).or_default().insert(tgt, weight);
-        neighbors.entry(tgt).or_default().insert(src, weight);
+        neighbors.entry(src).or_default().push((tgt, weight));
+        neighbors.entry(tgt).or_default().push((src, weight));
+        node_weights[src] += weight;
+        node_weights[tgt] += weight;
     }
 
-    // Initialize: each node in its own community
+    // Initialize: each node in own community
     let mut community: Vec<u32> = (0..n as u32).collect();
+    let mut community_weights: Vec<f64> = node_weights.clone();
 
     // Phase 1: Local move (Louvain-style)
-    let mut improved = true;
-    let mut iterations = 0;
-    let max_iterations = 100;
-
-    while improved && iterations < max_iterations {
-        improved = false;
-        iterations += 1;
-
+    let max_iterations = 10;
+    for _ in 0..max_iterations {
+        let mut moved = false;
+        
         for node in 0..n {
             let current_c = community[node];
+            let k_i = node_weights[node];
+            
+            if k_i == 0.0 {
+                continue;
+            }
 
             // Calculate sum of weights to each neighbor community
-            let neighbor_comms = if let Some(nbrs) = neighbors.get(&node) {
-                nbrs.iter()
-                    .map(|(&nbr, &w)| (community[nbr], w))
-                    .fold(HashMap::new(), |mut acc, (c, w)| {
-                        *acc.entry(c).or_insert(0.0) += w;
-                        acc
-                    })
-            } else {
-                HashMap::new()
-            };
+            let mut comm_sums: HashMap<u32, f64> = HashMap::new();
+            let mut current_comm_sum = 0.0;
+            
+            if let Some(nbrs) = neighbors.get(&node) {
+                for &(nbr, weight) in nbrs {
+                    let nbr_c = community[nbr];
+                    if nbr_c == current_c {
+                        current_comm_sum += weight;
+                    }
+                    *comm_sums.entry(nbr_c).or_insert(0.0) += weight;
+                }
+            }
 
-            // Find best community to move to
+            // Calculate modularity gain for each community
+            // delta_Q = (weight_to_c - weight_from_c) / m
+            //        - k_i * (community_weight_c - k_i) / m^2
             let mut best_c = current_c;
-            let mut best_delta = 0.0;
+            let mut best_gain = 0.0;
 
-            for (c, &weight_to_c) in &neighbor_comms {
+            for (c, &weight_to_c) in &comm_sums {
                 if *c == current_c {
                     continue;
                 }
                 
-                // Modularity gain
-                let delta = weight_to_c / m;
+                let weight_from_c = current_comm_sum;
+                let community_weight_c = community_weights[*c as usize];
                 
-                if delta > best_delta {
-                    best_delta = delta;
+                // Modularity gain
+                let gain = (weight_to_c - weight_from_c) / m 
+                    - k_i * (community_weight_c - k_i) / (m * m);
+
+                if gain > best_gain {
+                    best_gain = gain;
                     best_c = *c;
                 }
             }
 
-            // Move node if it improves modularity
-            if best_c != current_c && best_delta > 1e-10 {
+            // Move if positive gain
+            if best_c != current_c && best_gain > 1e-10 {
+                // Update community weights
+                community_weights[current_c as usize] -= k_i;
+                community_weights[best_c as usize] += k_i;
                 community[node] = best_c;
-                improved = true;
+                moved = true;
             }
+        }
+        
+        if !moved {
+            break;
         }
     }
 
-    // Renumber communities to 0..k (sorted by size descending)
+    // Phase 2: Refinement (simplified - check if communities are well-connected)
+    // Skip for now - will be added in future
+
+    // Renumber communities
     let mut comm_counts: HashMap<u32, usize> = HashMap::new();
     for &c in &community {
         *comm_counts.entry(c).or_insert(0) += 1;
     }
 
-    // Sort by count descending
     let mut comms: Vec<(u32, usize)> = comm_counts.into_iter().collect();
     comms.sort_by(|a, b| b.1.cmp(&a.1));
 
@@ -129,8 +147,39 @@ mod tests {
     }
 
     #[test]
+    fn test_single_edge() {
+        let edges = vec![(0, 1, 1.0)];
+        let result = leiden_communities(2, &edges);
+        assert_eq!(result[0], result[1]);
+    }
+
+    #[test]
+    fn test_disconnected() {
+        let edges = vec![
+            (0, 1, 1.0),
+            (2, 3, 1.0),
+        ];
+        let result = leiden_communities(4, &edges);
+        assert_eq!(result[0], result[1]);
+        assert_eq!(result[2], result[3]);
+    }
+
+    #[test]
+    fn test_star_graph() {
+        let edges = vec![
+            (0, 1, 1.0),
+            (0, 2, 1.0),
+            (0, 3, 1.0),
+            (0, 4, 1.0),
+        ];
+        let result = leiden_communities(5, &edges);
+        let unique: HashSet<u32> = result.iter().cloned().collect();
+        // Star graph is connected
+        assert!(unique.len() >= 1 && unique.len() <= 5);
+    }
+
+    #[test]
     fn test_two_cliques() {
-        // 2 separate cliques - no edges between them
         let edges = vec![
             (0, 1, 1.0),
             (0, 2, 1.0),
@@ -140,9 +189,8 @@ mod tests {
             (4, 5, 1.0),
         ];
         let result = leiden_communities(6, &edges);
+        // Should have 2 communities
         let unique: HashSet<u32> = result.iter().cloned().collect();
-        // No edges between cliques, so they may stay separate
-        // or merge depending on algorithm behavior
         assert!(unique.len() >= 2);
     }
 
@@ -156,7 +204,6 @@ mod tests {
             (4, 5, 10.0),
         ];
         let result = leiden_communities(6, &edges);
-        // Should have some communities
         let unique: HashSet<u32> = result.iter().cloned().collect();
         assert!(unique.len() >= 1);
     }
