@@ -6,12 +6,10 @@ pub mod analyze;
 pub mod build;
 pub mod cache;
 pub mod cluster;
-pub mod config;
 pub mod detect;
 pub mod export;
 pub mod extract;
 pub mod report;
-pub mod semantic;
 pub mod serve;
 pub mod types;
 pub mod validate;
@@ -24,10 +22,10 @@ pub use analyze::{
 pub use build::{build_graph, merge_extractions, merge_into_graph};
 pub use cache::{
     check_cache, compute_hash, update_cache, FileCache, 
-    load_cached, save_cached, clear_all_cache, check_semantic_cache,
+    load_cached, save_cached, clear_all_cache,
 };
 pub use cluster::{add_communities, cluster, split_oversized};
-pub use config::AppConfig;
+
 pub use detect::{detect, estimate_word_count, filter_code_files, get_stats, print_summary, DetectResult};
 pub use export::{export_stats, from_json, to_json};
 pub use extract::{extract_file, extract_files};
@@ -42,19 +40,7 @@ pub use types::{
 };
 pub use validate::{validate_extraction, validate_graph};
 
-use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
-
-fn read_source_files(paths: &[std::path::PathBuf]) -> HashMap<String, String> {
-    let mut content = HashMap::new();
-    for path in paths {
-        if let Ok(text) = fs::read_to_string(path) {
-            content.insert(path.to_string_lossy().to_string(), text);
-        }
-    }
-    content
-}
 
 /// Build graph from source path
 pub fn run_build(root: &str, output: &str, update: bool) -> anyhow::Result<BuildSummary> {
@@ -122,24 +108,6 @@ pub fn run_build(root: &str, output: &str, update: bool) -> anyhow::Result<Build
             merge_into_graph(&mut existing, extraction);
         }
 
-        // Step 3C: Extract semantic and merge
-        println!("Extracting semantic (infrastructure only)...");
-        let source_content = read_source_files(&changed);
-        let config = AppConfig::default();
-        let path_strings: Vec<String> = changed.iter().map(|p| p.to_string_lossy().to_string()).collect();
-        let (semantic_result, _, _, _) = match semantic::extract_semantic(
-            path_strings,
-            source_content,
-            config,
-            false,
-        ) {
-            Ok(result) => result,
-            Err(_) => (crate::types::ExtractionResult::new(), vec![], 0, 0),
-        };
-
-        // Merge semantic extraction into existing graph
-        merge_into_graph(&mut existing, semantic_result);
-
         // Re-cluster to account for new nodes
         println!("Re-clustering...");
         let community_result = cluster(&existing);
@@ -152,21 +120,7 @@ pub fn run_build(root: &str, output: &str, update: bool) -> anyhow::Result<Build
         println!("Extracting from {} files...", changed.len());
         let ast_extractions = extract_files(&changed);
 
-        println!("Extracting semantic (infrastructure only)...");
-        let source_content = read_source_files(&changed);
-        let config = AppConfig::default();
-        let path_strings: Vec<String> = changed.iter().map(|p| p.to_string_lossy().to_string()).collect();
-        let (semantic_result, _, _, _) = semantic::extract_semantic(
-            path_strings,
-            source_content,
-            config,
-            false,
-        ).unwrap_or_else(|_| {
-            (crate::types::ExtractionResult::new(), vec![], 0, 0)
-        });
-
-        let mut all_extractions = ast_extractions;
-        all_extractions.push(semantic_result);
+        let all_extractions = ast_extractions;
 
         println!("Building graph...");
         build_graph(all_extractions)

@@ -17,7 +17,7 @@ fn test_end_to_end_build() {
 
     // 1. Detect files
     let files = detect(test_dir).expect("detect should work");
-    let code_files: Vec<_> = files
+    let code_files: Vec<_> = files.files
         .into_iter()
         .filter(|f| f.file_type == garfield::FileType::Code)
         .collect();
@@ -86,6 +86,7 @@ fn test_cache_functionality() {
             hash: "hash1".to_string(),
             size: 100,
             modified: 0,
+            source_file: None,
         },
     );
     entries.insert(
@@ -95,11 +96,13 @@ fn test_cache_functionality() {
             hash: "hash2".to_string(),
             size: 200,
             modified: 0,
+            source_file: None,
         },
     );
 
     let cache = FileCache {
         entries,
+        by_source_file: HashMap::new(),
         version: "1.0".to_string(),
     };
 
@@ -337,11 +340,11 @@ fn test_file_detection() {
     let files = detect(test_dir).expect("detect should work");
 
     // Count by type
-    let code = files
+    let code = files.files
         .iter()
         .filter(|f| f.file_type == garfield::FileType::Code)
         .count();
-    let markdown = files
+    let markdown = files.files
         .iter()
         .filter(|f| f.file_type == garfield::FileType::Markdown)
         .count();
