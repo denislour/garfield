@@ -15,11 +15,11 @@
 //! - Creates "rationale_for" edges connecting rationale to code entities
 //! - This is Python-specific and requires docstring parsing
 
+use crate::lang::get_ts_language;
 use crate::types::{Confidence, Edge, ExtractionResult, Node};
 use std::collections::HashMap;
 use std::path::Path;
 use tree_sitter::{Node as TsNode, Parser};
-use tree_sitter_language_pack::get_language;
 
 /// Context cho extraction
 pub struct ExtractContext {
@@ -149,40 +149,16 @@ fn extract_with_language(
 
     let mut parser = Parser::new();
 
-    let lang = match language {
-        "python" => &tree_sitter_python::LANGUAGE,
-        "ruby" => &tree_sitter_ruby::LANGUAGE,
-        "scala" => &tree_sitter_scala::LANGUAGE,
-        "javascript" => &tree_sitter_javascript::LANGUAGE,
-        "typescript" => &tree_sitter_typescript::LANGUAGE_TYPESCRIPT,
-        "java" => &tree_sitter_java::LANGUAGE,
-        "go" => &tree_sitter_go::LANGUAGE,
-        "c" => &tree_sitter_c::LANGUAGE,
-        "cpp" => &tree_sitter_cpp::LANGUAGE,
-        "rust" => &tree_sitter_rust::LANGUAGE,
-        "bash" => &tree_sitter_bash::LANGUAGE,
-        _ => match get_language(language) {
-            Ok(l) => {
-                if let Err(e) = parser.set_language(&l.into()) {
-                    eprintln!("Failed to set language {}: {}", language, e);
-                    return simple_extract(source, file_path);
-                }
-                return extract_with_parser(
-                    source,
-                    file_path,
-                    &mut parser,
-                    &mut ctx,
-                    &source_bytes,
-                );
-            }
-            Err(e) => {
-                eprintln!("Language '{}' not supported: {:?}", language, e);
-                return simple_extract(source, file_path);
-            }
-        },
+    // Use language pack to get tree-sitter Language
+    let lang = match get_ts_language(language) {
+        Some(l) => l,
+        None => {
+            eprintln!("Language '{}' not supported", language);
+            return simple_extract(source, file_path);
+        }
     };
 
-    if let Err(e) = parser.set_language(&lang.clone().into()) {
+    if let Err(e) = parser.set_language(&lang.into()) {
         eprintln!("Failed to set language {}: {}", language, e);
         return simple_extract(source, file_path);
     }

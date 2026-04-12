@@ -9,6 +9,7 @@ pub mod community;
 pub mod detect;
 pub mod export;
 pub mod extract;
+pub mod lang;
 pub mod leiden;
 pub mod report;
 pub mod serve;
@@ -35,6 +36,7 @@ pub use serve::{
     find_shortest_path, query, score_nodes, get_node, get_neighbors, get_community, 
     graph_stats, format_graph_stats, get_node_body, NodeDetails, CommunityInfo, GraphStats,
 };
+pub use lang::{LangConfig, LANG_CONFIGS, get_ts_language, get_extension_lang};
 pub use types::{
     BuildSummary, CommunityResult, Confidence, DetectStats, DetectedFile, Edge, ExtractionResult,
     FileType, GraphData, GraphMetadata, Hyperedge, Node,
