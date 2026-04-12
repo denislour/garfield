@@ -1,6 +1,6 @@
 ---
 name: garfield
-description: Garfield knowledge graph for code architecture. Use when asked about architecture, code relationships, god nodes, or community structure.
+description: Garfield knowledge graph builder for code architecture. Use when asked about architecture, code relationships, god nodes, or community structure.
 trigger: /gf
 ---
 
@@ -8,204 +8,130 @@ trigger: /gf
 
 Garfield is a fast Rust-based code knowledge graph builder. It extracts code structure using tree-sitter (248+ languages) and provides BFS/DFS query, shortest path, and community detection.
 
-## What Garfield is for
-
-- Understanding codebase architecture before touching code
-- Finding what connects A to B
-- Identifying god nodes and key abstractions
-- Starting a new session to understand unfamiliar code
-
-## Rules
-
-### Before Searching Files
-
-When answering architecture questions or exploring codebase structure:
-
-1. **First**: Check if `garfield-out/graph.json` exists
-2. **If not**: Run `garfield build <path>` to build the graph
-3. **Then**: Use `/gf query` to understand connections
-
-### When to Use Garfield
+## When to Use Garfield
 
 - User asks about "architecture", "code structure", "how does X work"
 - User asks about "god nodes", "key classes", "core abstractions"
 - User asks about "what connects A to B"
-- Starting a new session to understand a codebase
+- Starting a new session to understand unfamiliar code
 - Before searching raw files for structural questions
 
-### When to Search Directly
+## Workflow - Follow These Steps
 
-- User asks for specific code content or implementation details
-- After understanding structure via Garfield, finding actual code
-- Simple file lookups that don't need context
+### Step 1: Check if Graph Exists
 
-## Workflow
-
-```
-User: "Giới thiệu về codebase"
-→ garfield build . (if graph doesn't exist)
-→ /gf report (show GRAPH_REPORT.md)
-→ Understand god nodes and structure
-→ Answer based on graph data
-
-User: "Logic của create order là gì?"
-→ /gf query "what does CreateOrderService connect to?"
-→ /gf path "CreateOrderService" "InsertOrderDetailService"
-→ Then search specific files for implementation
-```
-
----
-
-## /gf build - Build Knowledge Graph
-
-Build graph if it doesn't exist or needs updating.
+Before doing anything, check if the knowledge graph already exists:
 
 ```bash
-# Detect the garfield binary
-GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null)
-if [ -z "$GARFIELD_BIN" ]; then
-    # Try to find in project directory
-    GARFIELD_BIN="./target/release/garfield"
-    if [ ! -f "$GARFIELD_BIN" ]; then
-        echo "ERROR: Garfield not found. Build with: cargo build --release"
-        exit 1
+# Check for existing graph
+if [ -f "garfield-out/graph.json" ]; then
+    echo "Graph found at garfield-out/graph.json"
+    # Read metadata to show stats
+    if command -v garfield &> /dev/null; then
+        garfield stats --graph garfield-out/graph.json 2>/dev/null || echo "Run /gf report to see graph stats"
     fi
+else
+    echo "No graph found - need to build first"
 fi
+```
 
+### Step 2: Build Graph (If Needed)
+
+If no graph exists, or if user asks to rebuild:
+
+```bash
 # Ensure garfield-out directory exists
 mkdir -p garfield-out
 
-"$GARFIELD_BIN" build PATH
-```
+# Find garfield binary (try multiple locations)
+GARFIELD_BIN=""
+for bin in "garfield" "./target/release/garfield" "/home/jake/Compa/garfield/target/release/garfield"; do
+    if command -v "$bin" &> /dev/null || [ -f "$bin" ]; then
+        GARFIELD_BIN="$bin"
+        break
+    fi
+done
 
-Replace PATH with the actual path. If no path given, use `.` (current directory).
-
-After build, present the summary:
-```
-✅ Graph built successfully
-  Nodes: N
-  Edges: M
-  Communities: C
-```
-
----
-
-## /gf query - Query the Graph
-
-Query the knowledge graph using BFS or DFS traversal.
-
-```bash
-GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
-GRAPH_PATH="${GRAPH_PATH:-garfield-out/graph.json}"
-
-# Check if graph exists
-if [ ! -f "$GRAPH_PATH" ]; then
-    echo "ERROR: No graph found. Run 'garfield build .' first."
+if [ -z "$GARFIELD_BIN" ]; then
+    echo "ERROR: Garfield binary not found"
+    echo "Please build with: cd /home/jake/Compa/garfield && cargo build --release"
     exit 1
 fi
 
-QUESTION="QUESTION_TEXT"
-MODE="bfs"  # or 'dfs'
-DEPTH=3
-BUDGET=2000
+# Determine path (default to current directory)
+BUILD_PATH="${1:-.}"
 
-"$GARFIELD_BIN" query "$QUESTION" --$MODE --depth $DEPTH --budget $BUDGET --graph "$GRAPH_PATH"
-```
+# Run build
+echo "Building graph from: $BUILD_PATH"
+"$GARFIELD_BIN" build "$BUILD_PATH" --output garfield-out
 
-Two traversal modes:
-
-| Mode | Flag | Best for |
-|------|------|----------|
-| BFS (default) | _(none)_ | "What is X connected to?" - broad context, nearest neighbors first |
-| DFS | `--dfs` | "How does X reach Y?" - trace a specific path |
-
-After query, present results. Answer using **only** what the graph contains. Quote `source_location` when citing a specific fact.
-
----
-
-## /gf path - Find Shortest Path
-
-Find the shortest path between two named concepts in the graph.
-
-```bash
-GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
-GRAPH_PATH="${GRAPH_PATH:-garfield-out/graph.json}"
-
-# Check if graph exists
-if [ ! -f "$GRAPH_PATH" ]; then
-    echo "ERROR: No graph found. Run 'garfield build .' first."
-    exit 1
-fi
-
-SOURCE_NODE="NodeA"
-TARGET_NODE="NodeB"
-MAX_HOPS=8
-
-"$GARFIELD_BIN" path "$SOURCE_NODE" "$TARGET_NODE" --max-hops $MAX_HOPS --graph "$GRAPH_PATH"
-```
-
-After path, explain in plain language - what each hop means, why it's significant.
-
----
-
-## /gf explain - Explain a Node
-
-Give a plain-language explanation of a single node - everything connected to it.
-
-```bash
-GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
-GRAPH_PATH="${GRAPH_PATH:-garfield-out/graph.json}"
-
-# Check if graph exists
-if [ ! -f "$GRAPH_PATH" ]; then
-    echo "ERROR: No graph found. Run 'garfield build .' first."
-    exit 1
-fi
-
-NODE_NAME="NodeName"
-
-"$GARFIELD_BIN" explain "$NODE_NAME" --graph "$GRAPH_PATH"
-```
-
-Then write a 3-5 sentence explanation of what this node is, what it connects to, and why those connections are significant.
-
----
-
-## /gf report - Show Graph Report
-
-Show the human-readable GRAPH_REPORT.md.
-
-```bash
-if [ -f "garfield-out/GRAPH_REPORT.md" ]; then
-    cat garfield-out/GRAPH_REPORT.md
+# Show result
+if [ -f "garfield-out/graph.json" ]; then
+    echo ""
+    echo "✅ Graph built successfully"
+    cat garfield-out/GRAPH_REPORT.md 2>/dev/null | head -50 || echo "Run /gf report for full details"
 else
-    echo "No report found. Run 'garfield build .' first."
+    echo "❌ Build failed - check errors above"
 fi
 ```
 
----
+### Step 3: Present Initial Findings
 
-## After Code Changes
+After building, show the user:
 
-To keep the knowledge graph current:
+1. **Graph Stats** - nodes, edges, communities
+2. **God Nodes** - most connected concepts
+3. **Community Structure** - what major sections exist
 
 ```bash
-GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
+# Get graph stats
+garfield stats --graph garfield-out/graph.json
 
-# Incremental update (fast, only changed files)
-"$GARFIELD_BIN" build . --update
-
-# Or rebuild from scratch
-rm -rf garfield-out/
-"$GARFIELD_BIN" build .
+# Show top communities
+garfield report --graph garfield-out/graph.json 2>/dev/null | head -80
 ```
 
----
+### Step 4: Answer User Questions
 
-## Output Files
+Use these commands based on what user asks:
 
-- `garfield-out/graph.json` - Knowledge graph in JSON format
-- `garfield-out/GRAPH_REPORT.md` - Human-readable report
+#### Query - BFS (broad context)
+```bash
+garfield query "what does SERVICE_NAME connect to?" --graph garfield-out/graph.json
+```
+
+#### Query - DFS (specific path)
+```bash
+garfield query "how does A reach B" --dfs --graph garfield-out/graph.json
+```
+
+#### Find Path
+```bash
+garfield path "NodeA" "NodeB" --graph garfield-out/graph.json
+```
+
+#### Explain Node
+```bash
+garfield explain "NodeName" --graph garfield-out/graph.json
+```
+
+#### Show Report
+```bash
+cat garfield-out/GRAPH_REPORT.md
+```
+
+### Step 5: After Code Changes
+
+When user modifies code and wants to update:
+
+```bash
+# Incremental update (fast, only changed files)
+garfield build . --update --output garfield-out
+
+# Full rebuild (if needed)
+rm -rf garfield-out/
+garfield build . --output garfield-out
+```
 
 ---
 
@@ -217,8 +143,55 @@ rm -rf garfield-out/
 | Community detection | ✓ | ✓ |
 | BFS/DFS query | ✓ | ✓ |
 | Incremental cache | ✓ | ✓ |
-| LLM integration | ✓ | ✗ |
+| LLM integration | ✓ | ✗ (code-only) |
+| Semantic extraction | ✓ | ✗ |
 | Video/Audio | ✓ | ✗ |
-| MCP server | ✓ | Via garfield binary |
+| HTML viz | ✓ | ✗ |
 
-Garfield is **code-only extraction** - no LLM, MCP, video/audio, or Neo4j.
+Garfield is **code-only extraction** - no LLM, no semantic extraction, no video/audio support.
+
+---
+
+## Example Conversations
+
+### User: "Understand this codebase"
+```
+→ Step 1: Check graph exists
+→ Step 2: Build if needed
+→ Step 3: Show stats + god nodes + communities
+→ Step 4: Ask "What would you like to explore?"
+```
+
+### User: "How does authentication work?"
+```
+→ garfield query "authentication" --graph garfield-out/graph.json
+→ Present connections and paths
+→ Offer to trace specific chains
+```
+
+### User: "Trace from UserService to Database"
+```
+→ garfield path "UserService" "Database" --graph garfield-out/graph.json
+→ Explain each hop in plain language
+→ Show source locations for reference
+```
+
+---
+
+## Garfield Binary Locations
+
+The agent tries these paths in order:
+1. `garfield` (if in PATH)
+2. `./target/release/garfield`
+3. `/home/jake/Compa/garfield/target/release/garfield`
+
+Build if not found:
+```bash
+cd /home/jake/Compa/garfield && cargo build --release
+```
+
+## Output Files
+
+- `garfield-out/graph.json` - Knowledge graph (JSON)
+- `garfield-out/GRAPH_REPORT.md` - Human-readable report
+- `garfield-out/cache/` - Incremental build cache

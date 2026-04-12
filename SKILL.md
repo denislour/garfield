@@ -13,7 +13,7 @@ Garfield is a Rust-based knowledge graph builder for source code. It extracts co
 
 When working with Garfield projects:
 
-1. **First**: Check if `graphify-out/graph.json` exists
+1. **First**: Check if `garfield-out/graph.json` exists
 2. **If not**: Run `gf build <path>` to build the graph
 3. **Then**: Use Garfield tools to understand code relationships
 

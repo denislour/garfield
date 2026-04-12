@@ -17,6 +17,9 @@ import { Type } from "@sinclair/typebox";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 
+// Global context for PI agent
+let piContext: { bash?: (cmd: string) => Promise<string>; ui?: unknown } | null = null;
+
 interface GarfieldGraph {
     nodes: Array<{
         id: string;
@@ -57,7 +60,7 @@ interface GarfieldReport {
 // Check if garfield binary is available
 function isGarfieldAvailable(): boolean {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("child_process");
         execSync("which garfield", { stdio: "ignore" });
         return true;
     } catch {
@@ -67,18 +70,62 @@ function isGarfieldAvailable(): boolean {
 
 // Run garfield command
 async function runGarfield(args: string[]): Promise<string> {
-    const { execSync } = require("node:child_process");
-    try {
-        const binary = "garfield";
-        const result = execSync(`${binary} ${args.join(" ")}`, {
-            encoding: "utf-8",
-            timeout: 60000,
-        });
-        return result;
-    } catch (error: unknown) {
-        const err = error as { message?: string };
-        throw new Error(err.message || "Garfield command failed");
+    // Try piContext.bash first if available (PI agent's built-in method)
+    if (piContext?.bash) {
+        try {
+            return await piContext.bash(`garfield ${args.join(" ")}`);
+        } catch (error: unknown) {
+            // Fall through to try other methods
+        }
     }
+    
+    // Fallback: try different binary paths with execSync
+    const binaryPaths = [
+        "garfield",
+        "./target/release/garfield",
+        "./garfield",
+        "/home/jake/Compa/garfield/target/release/garfield"
+    ];
+    
+    let lastError = "";
+    
+    for (const binary of binaryPaths) {
+        try {
+            // Use spawn instead of execSync for better compatibility
+            const { spawn } = require("child_process");
+            return new Promise((resolve, reject) => {
+                const proc = spawn(binary, args, {
+                    encoding: "utf-8",
+                    timeout: 120000,
+                    shell: true
+                });
+                
+                let stdout = "";
+                let stderr = "";
+                
+                proc.stdout?.on("data", (data: string) => { stdout += data; });
+                proc.stderr?.on("data", (data: string) => { stderr += data; });
+                
+                proc.on("close", (code: number) => {
+                    if (code === 0) {
+                        resolve(stdout);
+                    } else {
+                        reject(new Error(stderr || `Exit code: ${code}`));
+                    }
+                });
+                
+                proc.on("error", (err: Error) => {
+                    reject(err);
+                });
+            });
+        } catch (error: unknown) {
+            const err = error as { message?: string };
+            lastError = err.message || "Unknown error";
+            continue;
+        }
+    }
+    
+    throw new Error(`Garfield not found. Tried: ${binaryPaths.join(", ")}. Last error: ${lastError}`);
 }
 
 // Load graph from JSON file
@@ -165,6 +212,8 @@ async function explainNode(name: string): Promise<string | null> {
 export default function garfieldExtension(pi: ExtensionAPI) {
     // Notify on load
     pi.on("session_start", async (_event, ctx) => {
+        // Save ctx globally for runGarfield to use
+        piContext = ctx as { bash?: (cmd: string) => Promise<string>; ui?: unknown };
         if (isGarfieldAvailable()) {
             ctx.ui.notify("Garfield extension loaded (gf available)", "success");
         } else {
