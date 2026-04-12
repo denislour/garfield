@@ -550,18 +550,28 @@ fn extract_import(
     let kind = node.kind();
     let file_node_id = ctx.file_stem.clone();
 
-    // Python: import_statement, import_from_statement
+    // import_statement (Python, JavaScript, TypeScript)
     if kind == "import_statement" || kind == "import_from_statement" {
         let child_count = node.child_count();
         for i in 0..child_count {
             if let Some(child) = node.child(i as u32) {
                 let child_kind = child.kind();
+                // Python: dotted_name, identifier, module_name
+                // JS/TS: string (e.g., "react" or "./module")
                 if child_kind == "dotted_name"
                     || child_kind == "identifier"
                     || child_kind == "module_name"
+                    || child_kind == "string"
                 {
                     if let Ok(text) = child.utf8_text(source) {
-                        let module = text.trim().trim_start_matches('.');
+                        // JS/TS: trim quotes and relative paths
+                        let module = text
+                            .trim()
+                            .trim_matches('"')
+                            .trim_matches('\'')
+                            .trim_start_matches("./")
+                            .trim_start_matches("../")
+                            .trim_start_matches('.');
                         if !module.is_empty() && module != "*" {
                             let target_id = make_import_node_id(module);
                             let relation = if kind == "import_from_statement" {
@@ -573,32 +583,6 @@ fn extract_import(
                                 file_node_id.clone(),
                                 target_id,
                                 relation.to_string(),
-                                Confidence::Extracted,
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-    }
-    // JavaScript/TypeScript: import_statement
-    else if kind == "import_statement" {
-        let child_count = node.child_count();
-        for i in 0..child_count {
-            if let Some(child) = node.child(i as u32) {
-                if child.kind() == "string" {
-                    if let Ok(text) = child.utf8_text(source) {
-                        let module = text
-                            .trim_matches('"')
-                            .trim_matches('\'')
-                            .trim_start_matches("./")
-                            .trim_start_matches("../");
-                        if !module.is_empty() {
-                            let target_id = make_import_node_id(module);
-                            result.add_edge(Edge::new(
-                                file_node_id.clone(),
-                                target_id,
-                                "imports".to_string(),
                                 Confidence::Extracted,
                             ));
                         }
