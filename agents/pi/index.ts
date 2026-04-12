@@ -58,7 +58,7 @@ interface GarfieldReport {
 function isGarfieldAvailable(): boolean {
     try {
         const { execSync } = require("node:child_process");
-        execSync("which gf || which garfield", { stdio: "ignore" });
+        execSync("which garfield", { stdio: "ignore" });
         return true;
     } catch {
         return false;
@@ -69,7 +69,7 @@ function isGarfieldAvailable(): boolean {
 async function runGarfield(args: string[]): Promise<string> {
     const { execSync } = require("node:child_process");
     try {
-        const binary = isGarfieldAvailable() ? "gf" : "garfield";
+        const binary = "garfield";
         const result = execSync(`${binary} ${args.join(" ")}`, {
             encoding: "utf-8",
             timeout: 60000,
@@ -185,8 +185,11 @@ export default function garfieldExtension(pi: ExtensionAPI) {
             const subcommand = parts[0] || "help";
 
             switch (subcommand) {
+                // Handle /gf . or /gf (no args) -> build current directory
+                case ".":
+                case "":
                 case "build": {
-                    const path = parts[1] || ".";
+                    const path = subcommand === "build" ? (parts[1] || ".") : ".";
                     const update = parts.includes("--update");
                     await ctx.ui.setStatus("gf", "Building graph...");
                     try {

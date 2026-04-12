@@ -268,12 +268,36 @@ fn walk_tree_pass2(
     
     // Call expressions - look for function calls
     if kind == "call_expression" || kind == "call" || kind == "invocation" {
-        if let Some((caller, callee)) = extract_call(node, ctx, source) {
+        if let Some((caller, callee, caller_name)) = extract_call(node, ctx, source) {
             let confidence = if ctx.is_known(&callee) {
                 Confidence::Extracted
             } else {
                 Confidence::Inferred
             };
+            
+            // Add caller node if not exists (for calls in global scope)
+            if !ctx.is_known(&caller) {
+                ctx.add_known_node(caller.clone());
+                result.add_node(Node::new(
+                    caller.clone(),
+                    caller_name.clone(),
+                    ctx.file_path.clone(),
+                    "L?".to_string(),
+                ));
+            }
+            
+            // Add callee node if not exists (for inferred calls to external/unknown functions)
+            if confidence == Confidence::Inferred && !ctx.is_known(&callee) {
+                ctx.add_known_node(callee.clone());
+                // Extract just the function name without file_stem prefix
+                let callee_name = callee.split(':').last().unwrap_or(&callee).to_string();
+                result.add_node(Node::new(
+                    callee.clone(),
+                    callee_name,
+                    ctx.file_path.clone(),
+                    "L?".to_string(),
+                ));
+            }
             
             result.add_edge(Edge::new(
                 caller,
@@ -374,7 +398,9 @@ fn get_definition_name(node: &TsNode, source: &[u8]) -> Option<String> {
 }
 
 /// Extract call information - find function being called
-fn extract_call(node: &TsNode, ctx: &ExtractContext, source: &[u8]) -> Option<(String, String)> {
+/// Extract call information - find function being called
+/// Returns (caller_full, callee_full, caller_name)
+fn extract_call(node: &TsNode, ctx: &ExtractContext, source: &[u8]) -> Option<(String, String, String)> {
     // Look for the function being called - usually first child that's an identifier
     let child_count = node.child_count();
     let mut func_name: Option<String> = None;
@@ -422,7 +448,7 @@ fn extract_call(node: &TsNode, ctx: &ExtractContext, source: &[u8]) -> Option<(S
         let callee = format!("{}:{}", ctx.file_stem, name);
         let caller_full = format!("{}:{}", ctx.file_stem, caller);
         
-        return Some((caller_full, callee));
+        return Some((caller_full, callee, caller));
     }
     
     None
