@@ -560,18 +560,52 @@ fn walk_tree_pass1(
 ) {
     let kind = node.kind();
 
-    // Common definition kinds for different languages
+    // All definition kinds across supported languages:
+    // Python: function_definition, class_definition, async_function_definition
+    // Ruby: class, module, method, singleton_method
+    // Rust: function_item, struct_item, impl_item, enum_item, trait_item, type_alias
+    // Java: class_declaration, method_declaration, interface_declaration
+    // Go: function_declaration, method_declaration, type_declaration
+    // TypeScript/JavaScript: function_declaration, class_declaration, method_definition, interface_declaration
+    // C/C++: function_definition, struct_specifier, class_specifier, enum_specifier
+    // Scala: class_definition, object_definition, trait_definition, function_definition
+    // Bash: function_definition
     let definition_kinds = [
+        // Common
         "function_definition",
+        "function_declaration",
         "class_definition",
+        "class_declaration",
         "method_definition",
+        "method_declaration",
         "module",
         "module_clause",
         "interface_declaration",
         "struct_declaration",
+        "struct_specifier",
+        "class_specifier",
         "enum_declaration",
+        "enum_specifier",
         "type_declaration",
-        "function_declaration",
+        // Rust-specific
+        "function_item",
+        "struct_item",
+        "impl_item",
+        "enum_item",
+        "trait_item",
+        "type_alias",
+        // Ruby-specific
+        "class",
+        "singleton_method",
+        // Go-specific
+        "type_spec",
+        // Scala-specific
+        "object_definition",
+        "trait_definition",
+        // TypeScript-specific
+        "abstract_class_declaration",
+        // Bash
+        "command",
     ];
 
     if definition_kinds.contains(&kind) {
@@ -981,7 +1015,10 @@ fn walk_tree_pass2(
 /// Get definition name - extract actual text from node
 fn get_definition_name(node: &TsNode, source: &[u8]) -> Option<String> {
     // Try different field names for different languages
-    let field_names = ["name", "identifier", "function", "declarator"];
+    // Common: name, identifier, function, declarator
+    // Rust: type (for impl_item), name (for struct, enum)
+    // TypeScript: name, body (for classes)
+    let field_names = ["name", "identifier", "function", "declarator", "type", "id"];
 
     for field in &field_names {
         if let Some(name_node) = node.child_by_field_name(field) {
@@ -1042,20 +1079,25 @@ fn get_definition_name(node: &TsNode, source: &[u8]) -> Option<String> {
     if let Ok(text) = node.utf8_text(source) {
         let trimmed = text.trim();
         // Make sure it's not too long
-        if !trimmed.is_empty() && trimmed.len() < 100 {
-            // Try to extract just the first identifier-like part
-            let first_word: String = trimmed
-                .chars()
-                .take_while(|c| c.is_alphanumeric() || *c == '_')
-                .collect();
-            if !first_word.is_empty()
-                && first_word
+        if !trimmed.is_empty() && trimmed.len() < 200 {
+            // Split by whitespace and find the first valid identifier
+            // Skip common keywords like "pub", "fn", "struct", "class", "def", etc.
+            let keywords = [
+                "pub", "fn", "func", "function", "def", "class", "struct", "enum",
+                "impl", "trait", "type", "interface", "module", "const", "static",
+                "async", "pub", "mut", "ref", "move", "unsafe", "extern", "crate",
+            ];
+            for word in trimmed.split_whitespace() {
+                let word_clean: String = word
                     .chars()
-                    .next()
-                    .map(|c| c.is_alphabetic())
-                    .unwrap_or(false)
-            {
-                return Some(first_word);
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect();
+                if !word_clean.is_empty()
+                    && !keywords.contains(&word_clean.as_str())
+                    && (word_clean.chars().next().map(|c| c.is_alphabetic()).unwrap_or(false))
+                {
+                    return Some(word_clean);
+                }
             }
         }
     }
