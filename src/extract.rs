@@ -591,30 +591,28 @@ fn extract_import(
             }
         }
     }
-    // Java: import_declaration
+    // Java/Swift: import_declaration
     else if kind == "import_declaration" {
-        let mut parts: Vec<String> = Vec::new();
+        // Java: identifier || scoped_identifier
+        // Swift: identifier
         let child_count = node.child_count();
         for i in 0..child_count {
             if let Some(child) = node.child(i as u32) {
                 let child_kind = child.kind();
                 if child_kind == "identifier" || child_kind == "scoped_identifier" {
                     if let Ok(text) = child.utf8_text(source) {
-                        parts.push(text.trim().to_string());
+                        let imported = text.trim();
+                        if !imported.is_empty() && imported != "*" {
+                            let target_id = make_import_node_id(imported);
+                            result.add_edge(Edge::new(
+                                file_node_id.clone(),
+                                target_id,
+                                "imports".to_string(),
+                                Confidence::Extracted,
+                            ));
+                        }
                     }
                 }
-            }
-        }
-        if !parts.is_empty() {
-            let imported = parts.last().map(|s| s.as_str()).unwrap_or("");
-            if !imported.is_empty() && imported != "*" {
-                let target_id = make_import_node_id(imported);
-                result.add_edge(Edge::new(
-                    file_node_id.clone(),
-                    target_id,
-                    "imports".to_string(),
-                    Confidence::Extracted,
-                ));
             }
         }
     }
@@ -712,28 +710,6 @@ fn extract_import(
                         "imports".to_string(),
                         Confidence::Extracted,
                     ));
-                }
-            }
-        }
-    }
-    // Swift: import_declaration
-    else if kind == "import_declaration" {
-        let child_count = node.child_count();
-        for i in 0..child_count {
-            if let Some(child) = node.child(i as u32) {
-                if child.kind() == "identifier" {
-                    if let Ok(text) = child.utf8_text(source) {
-                        let module = text.trim();
-                        if !module.is_empty() {
-                            let target_id = make_import_node_id(module);
-                            result.add_edge(Edge::new(
-                                file_node_id.clone(),
-                                target_id,
-                                "imports".to_string(),
-                                Confidence::Extracted,
-                            ));
-                        }
-                    }
                 }
             }
         }
