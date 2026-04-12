@@ -11,8 +11,10 @@ pub struct LangConfig {
     pub name: &'static str,
     pub extensions: Vec<&'static str>,
     pub comment_style: CommentStyle,
+    /// Tree-sitter node types for imports (e.g., "import_statement")
     pub import_kinds: Vec<&'static str>,
-    pub function_kinds: Vec<&'static str>,
+    /// Tree-sitter node types for definitions (e.g., "function_item", "struct_item", "class")
+    pub node_kinds: Vec<&'static str>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -49,7 +51,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["rs"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["use_declaration"],
-        function_kinds: vec!["function_item", "function_declaration"],
+        node_kinds: vec!["function_item", "function_declaration", "struct_item", "impl_item", "enum_item", "trait_item", "type_alias"],
     });
 
     // Python
@@ -58,7 +60,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["py", "pyi", "pyw"],
         comment_style: CommentStyle::Hash,
         import_kinds: vec!["import_statement", "import_from_statement"],
-        function_kinds: vec!["function_definition", "async_function_definition"],
+        node_kinds: vec!["class_definition", "function_definition", "async_function_definition"],
     });
 
     // Ruby
@@ -67,7 +69,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["rb"],
         comment_style: CommentStyle::Hash,
         import_kinds: vec!["require", "require_relative", "load"],
-        function_kinds: vec!["method", "singleton_method", "block"],
+        node_kinds: vec!["class", "module", "method", "singleton_method", "block"],
     });
 
     // Java
@@ -76,7 +78,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["java"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["import_declaration"],
-        function_kinds: vec!["method_declaration", "constructor_declaration"],
+        node_kinds: vec!["class", "class_declaration", "interface_declaration", "method_declaration", "constructor_declaration"],
     });
 
     // Go
@@ -85,7 +87,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["go"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["import_declaration"],
-        function_kinds: vec!["function_declaration", "method_declaration"],
+        node_kinds: vec!["function_declaration", "method_declaration"],
     });
 
     // JavaScript
@@ -94,7 +96,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["js", "mjs", "cjs", "jsx"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["import_statement", "import_clause"],
-        function_kinds: vec!["function_declaration", "arrow_function"],
+        node_kinds: vec!["class", "class_declaration", "function_declaration", "arrow_function"],
     });
 
     // TypeScript
@@ -103,7 +105,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["ts", "tsx"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["import_statement", "import_clause"],
-        function_kinds: vec!["function_declaration", "arrow_function", "method_definition"],
+        node_kinds: vec!["class", "class_declaration", "function_declaration", "arrow_function", "method_definition"],
     });
 
     // C
@@ -112,7 +114,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["c", "h"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["preproc_include"],
-        function_kinds: vec!["function_definition"],
+        node_kinds: vec!["function_definition"],
     });
 
     // C++
@@ -121,7 +123,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["cpp", "cc", "cxx", "hpp", "hh", "hxx"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["using_declaration", "preproc_include"],
-        function_kinds: vec!["function_definition", "method_definition"],
+        node_kinds: vec!["function_definition", "method_definition"],
     });
 
     // Scala
@@ -130,7 +132,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["scala"],
         comment_style: CommentStyle::CStyle,
         import_kinds: vec!["import_declaration"],
-        function_kinds: vec!["function_definition", "method_definition"],
+        node_kinds: vec!["class_definition", "object_definition", "trait_definition", "function_definition"],
     });
 
     // Lua
@@ -139,7 +141,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["lua"],
         comment_style: CommentStyle::Hash,
         import_kinds: vec![],
-        function_kinds: vec!["function_declaration", "local_function_declaration"],
+        node_kinds: vec!["function_declaration", "local_function_declaration"],
     });
 
     // Bash/Shell
@@ -148,7 +150,7 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         extensions: vec!["sh", "bash", "zsh"],
         comment_style: CommentStyle::Hash,
         import_kinds: vec![],
-        function_kinds: vec!["function_definition"],
+        node_kinds: vec!["function_definition"],
     });
 
     m
@@ -181,6 +183,19 @@ pub fn get_extension_lang(ext: &str) -> Option<&'static str> {
         }
     }
     None
+}
+
+/// Get ALL definition kinds from all languages (for tree walking)
+/// Returns a deduplicated list of tree-sitter node types
+pub fn all_definition_kinds() -> Vec<&'static str> {
+    use std::collections::HashSet;
+    let mut kinds: HashSet<&str> = HashSet::new();
+    for config in LANG_CONFIGS.values() {
+        for kind in &config.node_kinds {
+            kinds.insert(kind);
+        }
+    }
+    kinds.into_iter().collect()
 }
 
 #[cfg(test)]

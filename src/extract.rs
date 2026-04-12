@@ -15,11 +15,15 @@
 //! - Creates "rationale_for" edges connecting rationale to code entities
 //! - This is Python-specific and requires docstring parsing
 
-use crate::lang::get_ts_language;
+use crate::lang::{get_ts_language, all_definition_kinds};
 use crate::types::{Confidence, Edge, ExtractionResult, Node};
 use std::collections::HashMap;
 use std::path::Path;
 use tree_sitter::{Node as TsNode, Parser};
+use std::sync::LazyLock;
+
+/// All definition kinds loaded from lang.rs (dynamic per language config)
+static DEFINITION_KINDS: LazyLock<Vec<&'static str>> = LazyLock::new(all_definition_kinds);
 
 /// Context cho extraction
 pub struct ExtractContext {
@@ -514,61 +518,8 @@ fn walk_tree_pass1(
 ) {
     let kind = node.kind();
 
-    // All definition kinds across supported languages:
-    // Python: function_definition, class_definition, async_function_definition
-    // Ruby: class, module, method, singleton_method
-    // Rust: function_item, struct_item, impl_item, enum_item, trait_item, type_alias
-    // Java: class_declaration, method_declaration, interface_declaration
-    // Go: function_declaration, method_declaration, type_declaration
-    // TypeScript/JavaScript: function_declaration, class_declaration, method_definition, interface_declaration
-    // C/C++: function_definition, struct_specifier, class_specifier, enum_specifier
-    // Scala: class_definition, object_definition, trait_definition, function_definition
-    // Lua: function_declaration, local_function_declaration
-    // Bash: function_definition
-    let definition_kinds = [
-        // Common
-        "function_definition",
-        "function_declaration",
-        "class_definition",
-        "class_declaration",
-        "method_definition",
-        "method_declaration",
-        "module",
-        "module_clause",
-        "interface_declaration",
-        "struct_declaration",
-        "struct_specifier",
-        "class_specifier",
-        "enum_declaration",
-        "enum_specifier",
-        "type_declaration",
-        // Rust-specific
-        "function_item",
-        "struct_item",
-        "impl_item",
-        "enum_item",
-        "trait_item",
-        "type_alias",
-        // Ruby-specific
-        "class",
-        "module",
-        "method",
-        "singleton_method",
-        // Go-specific
-        "type_spec",
-        // Scala-specific
-        "object_definition",
-        "trait_definition",
-        // TypeScript-specific
-        "abstract_class_declaration",
-        // Bash
-        "command",
-        // Lua
-        "function_declaration",
-        "local_function_declaration",
-    ];
-
-    if definition_kinds.contains(&kind) {
+    // Use definition kinds from lang.rs (dynamic - loaded from language configs)
+    if DEFINITION_KINDS.contains(&kind) {
         let name = get_definition_name(node, source);
         if let Some(name) = name {
             // Skip if name is "identifier" (meaning we failed to extract real name)
