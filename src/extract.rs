@@ -81,61 +81,15 @@ pub fn extract_file(path: &Path, source: &str) -> anyhow::Result<ExtractionResul
         .unwrap_or("")
         .to_lowercase();
 
-    let lang = match ext.as_str() {
-        "py" | "pyi" | "pyw" => "python",
-        "js" | "mjs" | "cjs" | "jsx" => "javascript",
-        "ts" | "tsx" => "typescript",
-        "go" => "go",
-        "rs" => "rust",
-        "java" => "java",
-        "c" => "c",
-        "cpp" | "cc" | "cxx" | "hpp" | "hxx" => "cpp",
-        "rb" => "ruby",
-        "cs" => "csharp",
-        "kt" | "kts" => "kotlin",
-        "scala" => "scala",
-        "php" => "php",
-        "swift" => "swift",
-        "lua" => "lua",
-        "zig" => "zig",
-        _ => {
-            // Try to find language by extension
-            if let Some(lang) = find_language_by_ext(&ext) {
-                lang
-            } else {
-                return simple_extract(source, path.to_string_lossy().as_ref());
-            }
+    // Use centralized language config from lang.rs
+    let lang = match crate::lang::get_extension_lang(&ext) {
+        Some(l) => l,
+        None => {
+            return simple_extract(source, path.to_string_lossy().as_ref());
         }
     };
 
     extract_with_language(source, path.to_string_lossy().as_ref(), lang)
-}
-
-/// Find language by extension
-fn find_language_by_ext(ext: &str) -> Option<&'static str> {
-    // Map common extensions to language names
-    let mapping: HashMap<&str, &str> = [
-        ("py", "python"),
-        ("rs", "rust"),
-        ("js", "javascript"),
-        ("ts", "typescript"),
-        ("go", "go"),
-        ("java", "java"),
-        ("c", "c"),
-        ("cpp", "cpp"),
-        ("rb", "ruby"),
-        ("cs", "csharp"),
-        ("swift", "swift"),
-        ("kt", "kotlin"),
-        ("scala", "scala"),
-        ("php", "php"),
-        ("lua", "lua"),
-        ("zig", "zig"),
-    ]
-    .into_iter()
-    .collect();
-
-    mapping.get(ext).copied()
 }
 
 /// Extract using specific language
@@ -596,6 +550,8 @@ fn walk_tree_pass1(
         "type_alias",
         // Ruby-specific
         "class",
+        "module",
+        "method",
         "singleton_method",
         // Go-specific
         "type_spec",
