@@ -76,7 +76,7 @@ enum Cli {
 
     /// Get body (source code) of a function/method
     /// 
-    /// TIER 3: Reads directly from source files
+    /// Reads directly from source files
     Body {
         /// Node ID (format: file_stem:function_name)
         /// Example: serve:find_shortest_path
@@ -252,7 +252,7 @@ fn main() {
 
         Cli::Body { node_id } => {
             println!("Getting body for: {}\n", node_id);
-            println!("Reading from source files (TIER 3)...\n");
+            println!("Reading from source files...\n");
 
             match garfield::get_node_body(&node_id) {
                 Some(body) => {

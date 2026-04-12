@@ -264,39 +264,6 @@ pub struct DetectedFile {
     pub size_bytes: u64,
 }
 
-/// File summary (TIER 2) - stored in file_summaries.json
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FileSummary {
-    pub filename: String,
-    pub summary: String,
-    pub function_count: usize,
-    pub functions: Vec<String>,
-    #[serde(default)]
-    pub public_apis: Vec<String>,
-    #[serde(default)]
-    pub dependencies: Vec<String>,
-    #[serde(default)]
-    pub internal_functions: Vec<String>,
-    #[serde(default)]
-    pub doc_comment: Option<String>,
-}
-
-impl FileSummary {
-    /// Create a new file summary
-    pub fn new(filename: String, summary: String) -> Self {
-        Self {
-            filename,
-            summary,
-            function_count: 0,
-            functions: Vec::new(),
-            public_apis: Vec::new(),
-            dependencies: Vec::new(),
-            internal_functions: Vec::new(),
-            doc_comment: None,
-        }
-    }
-}
-
 /// Detection statistics
 #[derive(Debug)]
 pub struct DetectStats {

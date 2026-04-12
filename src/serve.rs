@@ -658,7 +658,7 @@ pub fn format_graph_stats(stats: &GraphStats) -> String {
     lines.join("\n")
 }
 
-/// Get node body (TIER 3) - reads directly from source files
+/// Get node body - reads directly from source files
 /// 
 /// Parse node ID to extract file_stem and function name,
 /// then read the source file and extract the function body.
