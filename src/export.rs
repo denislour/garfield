@@ -1,8 +1,8 @@
 //! Export module - JSON serialization
 
+use crate::types::GraphData;
 use std::fs;
 use std::path::Path;
-use crate::types::GraphData;
 
 /// Export graph to JSON file
 pub fn to_json(graph: &GraphData, output_path: &Path) -> anyhow::Result<()> {
@@ -10,11 +10,11 @@ pub fn to_json(graph: &GraphData, output_path: &Path) -> anyhow::Result<()> {
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    
+
     // Serialize to JSON with pretty formatting
     let json = serde_json::to_string_pretty(graph)?;
     fs::write(output_path, json)?;
-    
+
     println!("Exported graph to {}", output_path.display());
     Ok(())
 }
@@ -38,19 +38,25 @@ pub fn export_stats(graph: &GraphData, output_path: &Path) -> anyhow::Result<()>
         ambiguous_edges: usize,
         created: String,
     }
-    
+
     use crate::types::Confidence;
-    
-    let extracted = graph.links.iter()
+
+    let extracted = graph
+        .links
+        .iter()
         .filter(|e| matches!(e.confidence, Confidence::Extracted))
         .count();
-    let inferred = graph.links.iter()
+    let inferred = graph
+        .links
+        .iter()
         .filter(|e| matches!(e.confidence, Confidence::Inferred))
         .count();
-    let ambiguous = graph.links.iter()
+    let ambiguous = graph
+        .links
+        .iter()
         .filter(|e| matches!(e.confidence, Confidence::Ambiguous))
         .count();
-    
+
     let stats = Stats {
         total_nodes: graph.nodes.len(),
         total_edges: graph.links.len(),
@@ -60,17 +66,17 @@ pub fn export_stats(graph: &GraphData, output_path: &Path) -> anyhow::Result<()>
         ambiguous_edges: ambiguous,
         created: graph.metadata.created.clone(),
     };
-    
+
     let json = serde_json::to_string_pretty(&stats)?;
     fs::write(output_path, json)?;
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Node, Edge, Confidence, GraphMetadata};
+    use crate::types::{Confidence, Edge, GraphMetadata, Node};
 
     #[test]
     fn test_roundtrip() {
@@ -79,17 +85,21 @@ mod tests {
                 Node::new("a.py:foo".into(), "foo".into(), "a.py".into(), "L1".into()),
                 Node::new("b.py:bar".into(), "bar".into(), "b.py".into(), "L1".into()),
             ],
-            edges: vec![
-                Edge::new("a.py:foo".into(), "b.py:bar".into(), "calls".into(), Confidence::Extracted),
-            ],
+            links: vec![Edge::new(
+                "a.py:foo".into(),
+                "b.py:bar".into(),
+                "calls".into(),
+                Confidence::Extracted,
+            )],
             metadata: GraphMetadata::new(2, 1, 1),
+            hyperedges: Vec::new(),
         };
-        
+
         // Serialize
         let json = serde_json::to_string_pretty(&graph).unwrap();
         assert!(json.contains("foo"));
         assert!(json.contains("bar"));
-        
+
         // Deserialize
         let loaded: GraphData = serde_json::from_str(&json).unwrap();
         assert_eq!(loaded.nodes.len(), 2);
