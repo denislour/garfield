@@ -523,6 +523,7 @@ fn walk_tree_pass1(
     // TypeScript/JavaScript: function_declaration, class_declaration, method_definition, interface_declaration
     // C/C++: function_definition, struct_specifier, class_specifier, enum_specifier
     // Scala: class_definition, object_definition, trait_definition, function_definition
+    // Lua: function_declaration, local_function_declaration
     // Bash: function_definition
     let definition_kinds = [
         // Common
@@ -562,6 +563,9 @@ fn walk_tree_pass1(
         "abstract_class_declaration",
         // Bash
         "command",
+        // Lua
+        "function_declaration",
+        "local_function_declaration",
     ];
 
     if definition_kinds.contains(&kind) {

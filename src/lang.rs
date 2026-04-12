@@ -133,6 +133,15 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         function_kinds: vec!["function_definition", "method_definition"],
     });
 
+    // Lua
+    m.insert("lua", LangConfig {
+        name: "lua",
+        extensions: vec!["lua"],
+        comment_style: CommentStyle::Hash,
+        import_kinds: vec![],
+        function_kinds: vec!["function_declaration", "local_function_declaration"],
+    });
+
     // Bash/Shell
     m.insert("bash", LangConfig {
         name: "bash",
