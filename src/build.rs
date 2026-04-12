@@ -1,6 +1,6 @@
 //! Graph building module
 
-use crate::cluster::{add_communities, cluster, split_oversized};
+use crate::community::{add_communities, cluster, split_oversized};
 use crate::types::{Edge, ExtractionResult, GraphData, Hyperedge, Node};
 use std::collections::HashSet;
 

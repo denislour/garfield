@@ -5,7 +5,7 @@
 pub mod analyze;
 pub mod build;
 pub mod cache;
-pub mod cluster;
+pub mod community;
 pub mod detect;
 pub mod leiden;
 pub mod export;
@@ -25,7 +25,7 @@ pub use cache::{
     check_cache, compute_hash, update_cache, FileCache, 
     load_cached, save_cached, clear_all_cache,
 };
-pub use cluster::{add_communities, cluster, split_oversized};
+pub use community::{add_communities, cluster, split_oversized};
 
 pub use detect::{detect, estimate_word_count, filter_code_files, get_stats, print_summary, DetectResult};
 pub use export::{export_stats, from_json, to_json};
