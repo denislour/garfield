@@ -316,13 +316,14 @@ fn extract_python_rationale(
                         // Add rationale node
                         let rationale_node = Node {
                             id: rationale_key.clone(),
-                            label: truncated,
+                            label: truncated.clone(),
                             file_type: Some(crate::types::FileType::Rationale),
                             source_file: ctx.file_path.clone(),
                             source_location: format!("L{}", lineno + 1),
                             community: None,
                             node_type: Some("rationale".to_string()),
                             file_stem: Some(ctx.file_stem.clone()),
+                            summary: Some(truncated),
                         };
                         
                         // Connect to file node (module-level rationale)
@@ -478,13 +479,14 @@ fn create_rationale_node(
         // Add rationale node
         let rationale_node = Node {
             id: rationale_key.clone(),
-            label: truncated,
+            label: truncated.clone(),
             file_type: Some(crate::types::FileType::Rationale),
             source_file: ctx.file_path.clone(),
             source_location: format!("L{}", line),
             community: None,
             node_type: Some("docstring".to_string()),
             file_stem: Some(ctx.file_stem.clone()),
+            summary: Some(truncated),
         };
         
         // Connect to the entity (file_stem:name for classes/functions)

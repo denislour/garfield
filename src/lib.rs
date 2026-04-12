@@ -7,11 +7,12 @@ pub mod build;
 pub mod cache;
 pub mod community;
 pub mod detect;
-pub mod leiden;
 pub mod export;
 pub mod extract;
+pub mod leiden;
 pub mod report;
 pub mod serve;
+pub mod summary;
 pub mod types;
 pub mod validate;
 
@@ -38,6 +39,10 @@ pub use serve::{
 pub use types::{
     BuildSummary, CommunityResult, Confidence, DetectStats, DetectedFile, Edge, ExtractionResult,
     FileType, GraphData, GraphMetadata, Hyperedge, Node,
+};
+pub use summary::{
+    generate_file_summaries, save_file_summaries, load_file_summaries, 
+    get_file_summary, get_node_body,
 };
 pub use validate::{validate_extraction, validate_graph};
 
@@ -132,10 +137,13 @@ pub fn run_build(root: &str, output: &str, update: bool) -> anyhow::Result<Build
         eprintln!("Warning: Validation error: {:?}", e);
     }
 
-    // 6. Export JSON
-    to_json(&graph, &graph_path)?;
+    // 6. Generate file summaries (TIER 2)
+    let summaries = generate_file_summaries(&graph);
+    let summaries_path = output_path.join("file_summaries.json");
+    save_file_summaries(&summaries, &summaries_path)?;
 
-    // 7. Generate report
+    // 7. Export JSON
+    to_json(&graph, &graph_path)?;
     let report_path = output_path.join("GRAPH_REPORT.md");
     generate_report(&graph, &report_path, Some(detect_info), None)?;
 

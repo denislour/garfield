@@ -29,6 +29,9 @@ pub struct Node {
     /// File stem (module name)
     #[serde(default)]
     pub file_stem: Option<String>,
+    /// Summary (TIER 2) - brief description of function/variable
+    #[serde(default)]
+    pub summary: Option<String>,
 }
 
 impl Node {
@@ -43,6 +46,7 @@ impl Node {
             node_type: None,
             file_type: None,
             file_stem: None,
+            summary: None,
         }
     }
 }
@@ -262,6 +266,39 @@ pub struct DetectedFile {
     pub file_type: FileType,
     pub extension: String,
     pub size_bytes: u64,
+}
+
+/// File summary (TIER 2) - stored in file_summaries.json
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileSummary {
+    pub filename: String,
+    pub summary: String,
+    pub function_count: usize,
+    pub functions: Vec<String>,
+    #[serde(default)]
+    pub public_apis: Vec<String>,
+    #[serde(default)]
+    pub dependencies: Vec<String>,
+    #[serde(default)]
+    pub internal_functions: Vec<String>,
+    #[serde(default)]
+    pub doc_comment: Option<String>,
+}
+
+impl FileSummary {
+    /// Create a new file summary
+    pub fn new(filename: String, summary: String) -> Self {
+        Self {
+            filename,
+            summary,
+            function_count: 0,
+            functions: Vec::new(),
+            public_apis: Vec::new(),
+            dependencies: Vec::new(),
+            internal_functions: Vec::new(),
+            doc_comment: None,
+        }
+    }
 }
 
 /// Detection statistics
