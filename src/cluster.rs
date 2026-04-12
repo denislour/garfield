@@ -24,7 +24,7 @@ pub fn cluster(graph: &GraphData) -> CommunityResult {
         adj.insert(i, HashSet::new());
     }
     
-    for edge in &graph.edges {
+    for edge in &graph.links {
         if let (Some(&src), Some(&tgt)) = (
             node_index.get(&edge.source),
             node_index.get(&edge.target),

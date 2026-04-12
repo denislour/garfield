@@ -64,7 +64,8 @@ impl Edge {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ExtractionResult {
     pub nodes: Vec<Node>,
-    pub edges: Vec<Edge>,
+    #[serde(alias = "edges", rename = "links")]
+    pub links: Vec<Edge>,
 }
 
 impl ExtractionResult {
@@ -80,13 +81,13 @@ impl ExtractionResult {
 
     /// Add an edge
     pub fn add_edge(&mut self, edge: Edge) {
-        self.edges.push(edge);
+        self.links.push(edge);
     }
 
     /// Merge another extraction result into this one
     pub fn merge(&mut self, other: ExtractionResult) {
         self.nodes.extend(other.nodes);
-        self.edges.extend(other.edges);
+        self.links.extend(other.links);
     }
 }
 
@@ -115,20 +116,21 @@ impl GraphMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphData {
     pub nodes: Vec<Node>,
-    pub edges: Vec<Edge>,
+    #[serde(alias = "edges", rename = "links")]
+    pub links: Vec<Edge>,
     pub metadata: GraphMetadata,
 }
 
 impl GraphData {
     /// Create new graph data
-    pub fn new(nodes: Vec<Node>, edges: Vec<Edge>, communities: usize) -> Self {
+    pub fn new(nodes: Vec<Node>, links: Vec<Edge>, communities: usize) -> Self {
         let total_nodes = nodes.len();
-        let total_edges = edges.len();
+        let total_edges = links.len();
         
         Self {
             metadata: GraphMetadata::new(total_nodes, total_edges, communities),
             nodes,
-            edges,
+            links,
         }
     }
 }
@@ -228,6 +230,6 @@ mod tests {
         ));
         
         assert_eq!(result.nodes.len(), 1);
-        assert_eq!(result.edges.len(), 0);
+        assert_eq!(result.links.len(), 0);
     }
 }

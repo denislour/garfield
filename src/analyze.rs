@@ -60,7 +60,7 @@ pub fn find_god_nodes(graph: &GraphData, top_n: usize) -> Vec<GodNode> {
     let mut degree: HashMap<&str, usize> = HashMap::new();
     let mut neighbors: HashMap<&str, Vec<&str>> = HashMap::new();
     
-    for edge in &graph.edges {
+    for edge in &graph.links {
         *degree.entry(&edge.source).or_insert(0) += 1;
         *degree.entry(&edge.target).or_insert(0) += 1;
         neighbors
@@ -108,7 +108,7 @@ pub fn find_god_nodes(graph: &GraphData, top_n: usize) -> Vec<GodNode> {
 /// Find cross-community edges (surprising connections)
 pub fn find_surprising_connections(graph: &GraphData) -> Vec<SurprisingConnection> {
     graph
-        .edges
+        .links
         .iter()
         .filter_map(|edge| {
             let src_comm = graph
@@ -161,7 +161,7 @@ fn count_confidence(graph: &GraphData) -> ConfidenceStats {
         ambiguous: 0,
     };
     
-    for edge in &graph.edges {
+    for edge in &graph.links {
         match edge.confidence {
             Confidence::Extracted => stats.extracted += 1,
             Confidence::Inferred => stats.inferred += 1,

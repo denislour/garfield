@@ -31,7 +31,7 @@ pub fn generate_report(graph: &GraphData, output_path: &Path) -> anyhow::Result<
     ));
     
     // Confidence breakdown
-    let total = graph.edges.len();
+    let total = graph.links.len();
     if total > 0 {
         let extracted = analysis.confidence_stats.extracted;
         let inferred = analysis.confidence_stats.inferred;

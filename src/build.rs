@@ -2,6 +2,22 @@
 
 use crate::types::{ExtractionResult, GraphData, Node, Edge};
 use crate::cluster::{cluster, add_communities, split_oversized};
+use std::collections::HashSet;
+
+/// Deduplicate edges by source+target (keep first occurrence)
+fn dedup_edges(edges: Vec<Edge>) -> Vec<Edge> {
+    let mut seen: HashSet<(String, String)> = HashSet::new();
+    let mut result = Vec::new();
+    
+    for edge in edges {
+        let key = (edge.source.clone(), edge.target.clone());
+        if seen.insert(key) {
+            result.push(edge);
+        }
+    }
+    
+    result
+}
 
 /// Build graph từ extraction results
 pub fn build_graph(extractions: Vec<ExtractionResult>) -> GraphData {
@@ -11,16 +27,15 @@ pub fn build_graph(extractions: Vec<ExtractionResult>) -> GraphData {
     // Collect all nodes and edges
     for extraction in &extractions {
         nodes.extend(extraction.nodes.clone());
-        edges.extend(extraction.edges.clone());
+        edges.extend(extraction.links.clone());
     }
     
     // Deduplicate nodes by ID
     nodes.sort_by_key(|n| n.id.clone());
     nodes.dedup_by_key(|n| n.id.clone());
     
-    // Deduplicate edges
-    edges.sort();
-    edges.dedup();
+    // Deduplicate edges by source+target (keep first/Extracted)
+    edges = dedup_edges(edges);
     
     // Create graph without communities first
     let mut graph = GraphData::new(nodes, edges, 0);
@@ -44,20 +59,19 @@ pub fn merge_extractions(results: Vec<ExtractionResult>) -> ExtractionResult {
     
     for result in results {
         all_nodes.extend(result.nodes);
-        all_edges.extend(result.edges);
+        all_edges.extend(result.links);
     }
     
     // Deduplicate nodes by ID
     all_nodes.sort_by_key(|n| n.id.clone());
     all_nodes.dedup_by_key(|n| n.id.clone());
     
-    // Deduplicate edges
-    all_edges.sort();
-    all_edges.dedup();
+    // Deduplicate edges by source+target
+    all_edges = dedup_edges(all_edges);
     
     ExtractionResult {
         nodes: all_nodes,
-        edges: all_edges,
+        links: all_edges,
     }
 }
 
@@ -80,7 +94,7 @@ mod tests {
         let graph = build_graph(vec![extraction1, extraction2]);
         
         assert_eq!(graph.nodes.len(), 3);
-        assert_eq!(graph.edges.len(), 2);
+        assert_eq!(graph.links.len(), 2);
         assert!(graph.metadata.communities > 0);
     }
 

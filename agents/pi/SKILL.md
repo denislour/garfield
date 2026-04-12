@@ -21,7 +21,7 @@ Garfield is a fast Rust-based code knowledge graph builder. It extracts code str
 
 When answering architecture questions or exploring codebase structure:
 
-1. **First**: Check if `graphify-out/graph.json` exists
+1. **First**: Check if `garfield-out/graph.json` exists
 2. **If not**: Run `garfield build <path>` to build the graph
 3. **Then**: Use `/gf query` to understand connections
 
@@ -72,8 +72,8 @@ if [ -z "$GARFIELD_BIN" ]; then
     fi
 fi
 
-# Ensure graphify-out directory exists
-mkdir -p graphify-out
+# Ensure garfield-out directory exists
+mkdir -p garfield-out
 
 "$GARFIELD_BIN" build PATH
 ```
@@ -96,7 +96,7 @@ Query the knowledge graph using BFS or DFS traversal.
 
 ```bash
 GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
-GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
+GRAPH_PATH="${GRAPH_PATH:-garfield-out/graph.json}"
 
 # Check if graph exists
 if [ ! -f "$GRAPH_PATH" ]; then
@@ -129,7 +129,7 @@ Find the shortest path between two named concepts in the graph.
 
 ```bash
 GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
-GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
+GRAPH_PATH="${GRAPH_PATH:-garfield-out/graph.json}"
 
 # Check if graph exists
 if [ ! -f "$GRAPH_PATH" ]; then
@@ -154,7 +154,7 @@ Give a plain-language explanation of a single node - everything connected to it.
 
 ```bash
 GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/release/garfield)
-GRAPH_PATH="${GRAPH_PATH:-graphify-out/graph.json}"
+GRAPH_PATH="${GRAPH_PATH:-garfield-out/graph.json}"
 
 # Check if graph exists
 if [ ! -f "$GRAPH_PATH" ]; then
@@ -176,8 +176,8 @@ Then write a 3-5 sentence explanation of what this node is, what it connects to,
 Show the human-readable GRAPH_REPORT.md.
 
 ```bash
-if [ -f "graphify-out/GRAPH_REPORT.md" ]; then
-    cat graphify-out/GRAPH_REPORT.md
+if [ -f "garfield-out/GRAPH_REPORT.md" ]; then
+    cat garfield-out/GRAPH_REPORT.md
 else
     echo "No report found. Run 'garfield build .' first."
 fi
@@ -196,7 +196,7 @@ GARFIELD_BIN=$(which garfield 2>/dev/null || which garf 2>/dev/null || ./target/
 "$GARFIELD_BIN" build . --update
 
 # Or rebuild from scratch
-rm -rf graphify-out/
+rm -rf garfield-out/
 "$GARFIELD_BIN" build .
 ```
 
@@ -204,8 +204,8 @@ rm -rf graphify-out/
 
 ## Output Files
 
-- `graphify-out/graph.json` - Knowledge graph in JSON format
-- `graphify-out/GRAPH_REPORT.md` - Human-readable report
+- `garfield-out/graph.json` - Knowledge graph in JSON format
+- `garfield-out/GRAPH_REPORT.md` - Human-readable report
 
 ---
 

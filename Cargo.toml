@@ -5,15 +5,23 @@ edition = "2021"
 description = "Build knowledge graph from source code"
 license = "MIT"
 
+[lib]
+name = "garfield"
+path = "src/lib.rs"
+
+[[bin]]
+name = "garfield"
+path = "src/main.rs"
+
 [dependencies]
 # Graph
 petgraph = "0.8"
 
-# Tree-sitter - RECOMMENDED: tree-sitter-language-pack
+# Tree-sitter
 tree-sitter-language-pack = "1.4"
 tree-sitter = "0.26"
 
-# Community detection - RECOMMENDED
+# Community detection
 single-clustering = "0.6"
 
 # Utilities
@@ -25,14 +33,12 @@ rayon = "1.11"
 clap = { version = "4.5", features = ["derive"] }
 anyhow = "1.0"
 dirs = "5.0"
-
-[lib]
-name = "garfield"
-path = "src/lib.rs"
-
-[[bin]]
-name = "garfield"
-path = "src/main.rs"
+regex = "1"
 
 [dev-dependencies]
 tempfile = "3.8"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

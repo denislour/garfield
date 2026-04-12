@@ -40,7 +40,7 @@ pub fn validate_extraction(extraction: &ExtractionResult) -> Result<(), Validati
         .collect();
     
     // Check edge references
-    for edge in &extraction.edges {
+    for edge in &extraction.links {
         if !known_ids.contains(&edge.source) {
             return Err(ValidationError::UnknownNodeReference {
                 edge: format!("{} -> {}", edge.source, edge.target),
@@ -86,7 +86,7 @@ pub fn validate_graph(graph: &GraphData) -> Result<(), ValidationError> {
         .collect();
     
     // Check all edges reference valid nodes
-    for edge in &graph.edges {
+    for edge in &graph.links {
         if !known_ids.contains(&edge.source) {
             return Err(ValidationError::UnknownNodeReference {
                 edge: format!("{} -> {}", edge.source, edge.target),
@@ -110,11 +110,11 @@ pub fn validate_graph(graph: &GraphData) -> Result<(), ValidationError> {
         );
     }
     
-    if graph.metadata.total_edges != graph.edges.len() {
+    if graph.metadata.total_edges != graph.links.len() {
         eprintln!(
             "Warning: metadata.total_edges ({}) != edges.len() ({})",
             graph.metadata.total_edges,
-            graph.edges.len()
+            graph.links.len()
         );
     }
     

@@ -173,7 +173,7 @@ fn build_adjacency(graph: &GraphData) -> HashMap<String, Vec<String>> {
         adj.entry(node.id.clone()).or_default();
     }
     
-    for edge in &graph.edges {
+    for edge in &graph.links {
         adj.entry(edge.source.clone())
             .or_default()
             .push(edge.target.clone());
@@ -188,7 +188,7 @@ fn build_adjacency(graph: &GraphData) -> HashMap<String, Vec<String>> {
 /// Find edge between two nodes
 fn find_edge(graph: &GraphData, source: &str, target: &str) -> Option<crate::types::Edge> {
     graph
-        .edges
+        .links
         .iter()
         .find(|e| e.source == source && e.target == target)
         .cloned()
@@ -209,7 +209,7 @@ pub fn subgraph_to_text(
         .iter()
         .map(|nid| {
             let degree = graph
-                .edges
+                .links
                 .iter()
                 .filter(|e| e.source == *nid || e.target == *nid)
                 .count();

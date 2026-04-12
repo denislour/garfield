@@ -1,0 +1,3 @@
+# Auto-fix clippy warnings on build
+[build]
+rustflags = ["--cfg", "clippy_warn"]

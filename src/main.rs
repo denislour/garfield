@@ -19,7 +19,7 @@ enum Cli {
         update: bool,
         
         /// Output directory
-        #[arg(long, default_value = "graphify-out")]
+        #[arg(long, default_value = "garfield-out")]
         output: String,
     },
     
@@ -41,7 +41,7 @@ enum Cli {
         budget: usize,
         
         /// Graph file path
-        #[arg(long, default_value = "graphify-out/graph.json")]
+        #[arg(long, default_value = "garfield-out/graph.json")]
         graph: String,
     },
     
@@ -58,7 +58,7 @@ enum Cli {
         max_hops: usize,
         
         /// Graph file path
-        #[arg(long, default_value = "graphify-out/graph.json")]
+        #[arg(long, default_value = "garfield-out/graph.json")]
         graph: String,
     },
     
@@ -68,19 +68,37 @@ enum Cli {
         name: String,
         
         /// Graph file path
-        #[arg(long, default_value = "graphify-out/graph.json")]
+        #[arg(long, default_value = "garfield-out/graph.json")]
         graph: String,
     },
     
     /// Install agent integration (pi, claude, cursor)
     Agent {
-        /// Agent name: pi, claude, cursor
-        name: String,
+        /// Install agent: pi, claude, cursor
+        #[arg(value_enum)]
+        name: AgentName,
         
         /// Force overwrite existing files
         #[arg(long, short = 'f')]
         force: bool,
     },
+    
+    /// Uninstall agent integration (pi, claude, cursor)
+    Uninstall {
+        /// Uninstall agent: pi, claude, cursor
+        #[arg(value_enum)]
+        name: AgentName,
+    },
+    
+    /// Show help
+    Help,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum AgentName {
+    Pi,
+    Claude,
+    Cursor,
 }
 
 fn main() {
@@ -88,7 +106,7 @@ fn main() {
     
     match cli {
         Cli::Build { path, update, output } => {
-            println!("gf v{} - Building graph", env!("CARGO_PKG_VERSION"));
+            println!("garfield v{} - Building graph", env!("CARGO_PKG_VERSION"));
             println!("Path: {}", path);
             println!("Output: {}\n", output);
             
@@ -171,7 +189,7 @@ fn main() {
                         }
                         
                         // Find connections
-                        let connections: Vec<_> = g.edges.iter()
+                        let connections: Vec<_> = g.links.iter()
                             .filter(|e| e.source == node.id || e.target == node.id)
                             .collect();
                         
@@ -199,26 +217,80 @@ fn main() {
         }
         
         Cli::Agent { name, force } => {
-            install_agent(&name, force);
+            let name_str = match name {
+                AgentName::Pi => "pi",
+                AgentName::Claude => "claude",
+                AgentName::Cursor => "cursor",
+            };
+            install_agent(name_str, force);
+        }
+        
+        Cli::Uninstall { name } => {
+            let name_str = match name {
+                AgentName::Pi => "pi",
+                AgentName::Claude => "claude",
+                AgentName::Cursor => "cursor",
+            };
+            uninstall_agent(name_str);
+        }
+        
+        Cli::Help => {
+            print_help();
         }
     }
 }
 
+/// Print help
+fn print_help() {
+    println!("garfield v{} - Build knowledge graph from source code", env!("CARGO_PKG_VERSION"));
+    println!();
+    println!("Usage: garfield <command> [options]");
+    println!();
+    println!("Commands:");
+    println!("  build <path>           Build graph from source code");
+    println!("    --update, -u          Incremental update");
+    println!("    --output <dir>        Output directory (default: garfield-out)");
+    println!();
+    println!("  query \"<question>\"     Query the graph");
+    println!("    --dfs                 Use depth-first search");
+    println!("    --depth N             Traversal depth (default: 3)");
+    println!("    --budget N            Token budget (default: 2000)");
+    println!("    --graph <path>        Graph file (default: garfield-out/graph.json)");
+    println!();
+    println!("  path \"<source>\" \"<target>\"  Find shortest path");
+    println!("    --max-hops N          Maximum hops (default: 8)");
+    println!();
+    println!("  explain \"<name>\"        Explain a node");
+    println!("    --graph <path>        Graph file");
+    println!();
+    println!("  agent <name>           Install agent integration (pi, claude, cursor)");
+    println!("    --force, -f           Overwrite existing files");
+    println!();
+    println!("  uninstall <name>       Uninstall agent integration");
+    println!();
+    println!("Examples:");
+    println!("  garfield build ./src");
+    println!("  garfield build . --update");
+    println!("  garfield query \"what does X connect to?\"");
+    println!("  garfield path \"NodeA\" \"NodeB\"");
+    println!("  garfield explain \"FunctionName\"");
+    println!("  garfield agent pi");
+    println!("  garfield uninstall pi");
+}
+
 /// Install agent integration
 fn install_agent(name: &str, force: bool) {
-    use std::fs;
-    
-    println!("gf agent {} - Installing agent integration\n", name);
+    println!("garfield agent {} - Installing agent integration\n", name);
     
     // Get home directory and exe path
     let home = dirs::home_dir().expect("Could not find home directory");
     let current_exe = std::env::current_exe().expect("Could not get current executable path");
     let exe_path = current_exe.to_string_lossy().to_string();
-    let gf_binary = if cfg!(windows) { "gf.exe" } else { "gf" };
+    let garfield_binary = "garfield";
     
     // Get current directory for graph path
     let cwd = std::env::current_dir().unwrap_or_default();
-    let graph_json_path = cwd.join("graphify-out/graph.json");
+    let graph_json_path = cwd.join("garfield-out/graph.json");
     let graph_json_absolute = graph_json_path.to_string_lossy().to_string();
     
     // Get agent directory
@@ -227,21 +299,109 @@ fn install_agent(name: &str, force: bool) {
     if !agent_dir.exists() {
         eprintln!("❌ Unknown agent: {}", name);
         eprintln!("Available agents:");
-        eprintln!("  pi      - PI agent (✅ Ready)");
-        eprintln!("  claude  - Claude Code (🚧 Coming soon)");
-        eprintln!("  cursor  - Cursor IDE (🚧 Coming soon)");
+        eprintln!("  pi      - PI agent");
+        eprintln!("  claude  - Claude Code");
+        eprintln!("  cursor  - Cursor IDE");
         std::process::exit(1);
     }
     
     match name {
         "pi" => install_pi_agent(&home, &exe_path, force),
-        "claude" => install_claude_agent(&cwd, gf_binary, &graph_json_absolute, force),
-        "cursor" => install_cursor_agent(&cwd, gf_binary, force),
+        "claude" => install_claude_agent(&cwd, garfield_binary, &graph_json_absolute, force),
+        "cursor" => install_cursor_agent(&cwd, garfield_binary, force),
         _ => {
             eprintln!("❌ Unknown agent: {}", name);
             std::process::exit(1);
         }
     }
+}
+
+/// Uninstall agent integration
+fn uninstall_agent(name: &str) {
+    println!("garfield uninstall {} - Removing agent integration\n", name);
+    
+    let home = dirs::home_dir().expect("Could not find home directory");
+    
+    match name {
+        "pi" => {
+            let ext_dir = home.join(".pi/agent/extensions/garfield");
+            let skill_dir = home.join(".pi/agent/skills/garfield");
+            
+            // Remove extension
+            if ext_dir.exists() {
+                std::fs::remove_dir_all(&ext_dir).ok();
+                println!("✅ PI Extension removed: {}", ext_dir.display());
+            } else {
+                println!("  PI Extension not found");
+            }
+            
+            // Remove skill
+            if skill_dir.exists() {
+                std::fs::remove_dir_all(&skill_dir).ok();
+                println!("✅ PI Skill removed: {}", skill_dir.display());
+            } else {
+                println!("  PI Skill not found");
+            }
+            
+            println!("\n✨ PI agent uninstallation complete!");
+        }
+        "claude" => {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let agents_md = cwd.join("AGENTS.md");
+            let mcp_config = cwd.join(".claude_desktop_config.json");
+            
+            // Remove AGENTS.md section
+            if agents_md.exists() {
+                let content = std::fs::read_to_string(&agents_md).unwrap_or_default();
+                if content.contains("## garfield") || content.contains("## Garfield") {
+                    let cleaned = remove_garfield_section(&content);
+                    std::fs::write(&agents_md, cleaned).ok();
+                    println!("✅ AGENTS.md section removed");
+                } else {
+                    println!("  AGENTS.md section not found");
+                }
+            }
+            
+            // Remove MCP config
+            if mcp_config.exists() {
+                std::fs::remove_file(&mcp_config).ok();
+                println!("✅ Claude Desktop config removed");
+            }
+            
+            println!("\n✨ Claude agent uninstallation complete!");
+        }
+        "cursor" => {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let agents_md = cwd.join("AGENTS.md");
+            
+            // Remove AGENTS.md section
+            if agents_md.exists() {
+                let content = std::fs::read_to_string(&agents_md).unwrap_or_default();
+                if content.contains("## garfield") || content.contains("## Garfield") {
+                    let cleaned = remove_garfield_section(&content);
+                    std::fs::write(&agents_md, cleaned).ok();
+                    println!("✅ AGENTS.md section removed");
+                } else {
+                    println!("  AGENTS.md section not found");
+                }
+            }
+            
+            println!("\n✨ Cursor agent uninstallation complete!");
+        }
+        _ => {
+            eprintln!("❌ Unknown agent: {}", name);
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Remove ## garfield section from markdown
+fn remove_garfield_section(content: &str) -> String {
+    use regex::Regex;
+    
+    // Match ## garfield or ## Garfield section until next ## or EOF
+    let re = Regex::new(r"(?i)\n*## garfield\n.*?(?=\n## |\Z)").unwrap();
+    re.replace_all(content, "").trim().to_string() + "\n"
 }
 
 /// Install PI agent
@@ -261,9 +421,7 @@ fn install_pi_agent(home: &std::path::Path, exe_path: &str, force: bool) {
         println!("  Source: {}", ext_src.display());
         println!("  Dest:   {}", ext_dir.display());
         
-        if !ext_dir.exists() {
-            fs::create_dir_all(&ext_dir).expect("Failed to create extension directory");
-        }
+        fs::create_dir_all(&ext_dir).expect("Failed to create extension directory");
         
         let ext_dst = ext_dir.join("index.ts");
         if ext_dst.exists() && !force {
@@ -283,16 +441,16 @@ fn install_pi_agent(home: &std::path::Path, exe_path: &str, force: bool) {
         println!("  Source: {}", skill_src.display());
         println!("  Dest:   {}", skill_dir.display());
         
-        if !skill_dir.exists() {
-            fs::create_dir_all(&skill_dir).expect("Failed to create skill directory");
-        }
+        fs::create_dir_all(&skill_dir).expect("Failed to create skill directory");
         
         let skill_dst = skill_dir.join("SKILL.md");
         if skill_dst.exists() && !force {
             println!("  ⚠️  Skill already exists (use -f to overwrite)");
         } else {
             let skill_content = fs::read_to_string(&skill_src).expect("Failed to read skill file");
-            fs::write(&skill_dst, skill_content).expect("Failed to write skill file");
+            // Update skill content with correct output path
+            let updated_content = skill_content.replace("graphify-out", "garfield-out");
+            fs::write(&skill_dst, updated_content).expect("Failed to write skill file");
             println!("  ✅ Skill installed!");
         }
     }
@@ -301,12 +459,12 @@ fn install_pi_agent(home: &std::path::Path, exe_path: &str, force: bool) {
     println!("\nNext steps:");
     println!("  1. Start PI: pi");
     println!("  2. Type /reload to load the extension");
-    println!("  3. Try: /gf help");
+    println!("  3. Try: /garfield help");
 }
 
 /// Install Claude agent (AGENTS.md + MCP config)
-fn install_claude_agent(cwd: &std::path::Path, gf_binary: &str, graph_json_path: &str, force: bool) {
-    use std::fs;
+fn install_claude_agent(cwd: &std::path::Path, garfield_binary: &str, graph_json_path: &str, force: bool) {
+    
     
     let agents_md = cwd.join("AGENTS.md");
     let mcp_config = cwd.join(".claude_desktop_config.json");
@@ -315,11 +473,18 @@ fn install_claude_agent(cwd: &std::path::Path, gf_binary: &str, graph_json_path:
     println!("  AGENTS.md: {}", agents_md.display());
     
     if agents_md.exists() && !force {
-        println!("  ⚠️  AGENTS.md already exists (use -f to overwrite)");
+        let content = std::fs::read_to_string(&agents_md).unwrap_or_default();
+        if content.contains("## garfield") || content.contains("## Garfield") {
+            println!("  ⚠️  AGENTS.md already has garfield section (use -f to overwrite)");
+        } else {
+            let new_content = content.trim_end().to_string() + "\n\n" + &generate_garfield_section(garfield_binary);
+            std::fs::write(&agents_md, new_content).expect("Failed to write AGENTS.md");
+            println!("  ✅ AGENTS.md section added!");
+        }
     } else {
-        let content = generate_agents_md(gf_binary);
-        fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
-        println!("  ✅ AGENTS.md installed!");
+        let content = generate_garfield_section(garfield_binary);
+        std::fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
+        println!("  ✅ AGENTS.md created!");
     }
     
     println!("\n🔌 Installing Claude Desktop MCP...");
@@ -328,20 +493,17 @@ fn install_claude_agent(cwd: &std::path::Path, gf_binary: &str, graph_json_path:
     if mcp_config.exists() && !force {
         println!("  ⚠️  .claude_desktop_config.json already exists (use -f to overwrite)");
     } else {
-        let content = generate_mcp_config(graph_json_path, gf_binary);
-        fs::write(&mcp_config, content).expect("Failed to write MCP config");
+        let content = generate_mcp_config(graph_json_path, garfield_binary);
+        std::fs::write(&mcp_config, content).expect("Failed to write MCP config");
         println!("  ✅ MCP config installed!");
     }
     
     println!("\n✨ Claude agent installation complete!");
-    println!("\nSupported:");
-    println!("  Claude Code    - Reads AGENTS.md automatically");
-    println!("  Claude Desktop - Uses .claude_desktop_config.json");
 }
 
 /// Install Cursor agent (AGENTS.md)
-fn install_cursor_agent(cwd: &std::path::Path, gf_binary: &str, force: bool) {
-    use std::fs;
+fn install_cursor_agent(cwd: &std::path::Path, garfield_binary: &str, force: bool) {
+    
     
     let agents_md = cwd.join("AGENTS.md");
     
@@ -349,14 +511,40 @@ fn install_cursor_agent(cwd: &std::path::Path, gf_binary: &str, force: bool) {
     println!("  AGENTS.md: {}", agents_md.display());
     
     if agents_md.exists() && !force {
-        println!("  ⚠️  AGENTS.md already exists (use -f to overwrite)");
+        let content = std::fs::read_to_string(&agents_md).unwrap_or_default();
+        if content.contains("## garfield") || content.contains("## Garfield") {
+            println!("  ⚠️  AGENTS.md already has garfield section (use -f to overwrite)");
+        } else {
+            let new_content = content.trim_end().to_string() + "\n\n" + &generate_garfield_section(garfield_binary);
+            std::fs::write(&agents_md, new_content).expect("Failed to write AGENTS.md");
+            println!("  ✅ AGENTS.md section added!");
+        }
     } else {
-        let content = generate_agents_md(gf_binary);
-        fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
-        println!("  ✅ AGENTS.md installed!");
+        let content = generate_garfield_section(garfield_binary);
+        std::fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
+        println!("  ✅ AGENTS.md created!");
     }
     
     println!("\n✨ Cursor agent installation complete!");
+}
+
+/// Generate ## garfield section for AGENTS.md
+fn generate_garfield_section(_gf_binary: &str) -> String {
+    r#"## garfield
+
+This project has a garfield knowledge graph at garfield-out/.
+
+Rules:
+- Before answering architecture or codebase questions, read garfield-out/GRAPH_REPORT.md for god nodes and community structure
+- If garfield-out/wiki/index.md exists, navigate it instead of reading raw files
+- After modifying code files in this session, run `garfield build . --update` to keep the graph current
+
+Commands:
+- `garfield build <path>` - Build knowledge graph
+- `garfield query "X"` - Query the graph
+- `garfield path "A" "B"` - Find path between nodes
+- `garfield explain "Node"` - Explain a node
+"#.to_string()
 }
 
 /// Generate TypeScript extension content
@@ -364,14 +552,15 @@ fn generate_extension_ts(exe_path: &str) -> String {
     format!(r#"/**
  * Garfield PI Extension
  * 
- * Auto-generated by: gf agent pi
+ * Auto-generated by: garfield agent pi
  * Garfield is a Rust-based code extraction tool.
  * Binary: {exe_path}
  */
 
 import type {{ ExtensionAPI }} from "@mariozechner/pi-coding-agent";
 import {{ Type }} from "@sinclair/typebox";
-import {{ existsSync, readFileSync }} from "node:fs";
+import {{ existsSync, readFileSync, execSync }} from "node:fs";
+import {{ join, resolve }} from "node:path";
 
 interface GarfieldGraph {{
     nodes: Array<{{
@@ -396,49 +585,140 @@ interface GarfieldGraph {{
 
 // Garfield binary path
 const GF_BINARY = "{exe_path}";
+const GRAPH_DIR = "garfield-out";
+const GRAPH_JSON = join(GRAPH_DIR, "graph.json");
+const GRAPH_REPORT = join(GRAPH_DIR, "GRAPH_REPORT.md");
 
-function loadGraph(graphPath: string = "graphify-out/graph.json"): GarfieldGraph | null {{
+function loadGraph(): GarfieldGraph | null {{
     try {{
-        if (!existsSync(graphPath)) return null;
-        return JSON.parse(readFileSync(graphPath, "utf-8"));
+        if (!existsSync(GRAPH_JSON)) return null;
+        return JSON.parse(readFileSync(GRAPH_JSON, "utf-8"));
     }} catch {{
         return null;
     }}
 }}
 
+function runGarfield(args: string[]): {{ stdout: string; stderr: string; code: number }} {{
+    try {{
+        const stdout = execSync(`${{GF_BINARY}} ${{args.join(' ')}}`, {{ encoding: "utf-8" }});
+        return {{ stdout, stderr: "", code: 0 }};
+    }} catch (e: any) {{
+        return {{ stdout: e.stdout || "", stderr: e.stderr || e.message, code: e.status || 1 }};
+    }}
+}}
+
 export default function garfieldExtension(pi: ExtensionAPI) {{
     pi.on("session_start", async (_event, ctx) => {{
-        ctx.ui.notify("Garfield extension loaded", "success");
+        // Check if graph exists and notify
+        const graph = loadGraph();
+        if (graph) {{
+            ctx.ui.notify(`Garfield: ${{graph.metadata?.total_nodes || 0}} nodes, ${{graph.metadata?.total_edges || 0}} edges`, "success");
+        }}
     }});
 
-    pi.registerCommand("gf", {{
+    // /garfield command
+    pi.registerCommand("garfield", {{
         description: "Garfield: build, query, path, explain, report",
         handler: async (args, ctx) => {{
-            const parts = args.trim().split(/\s+/);
+            const parts = args.trim().split(/\s+/).filter(Boolean);
             const cmd = parts[0] || "help";
             
             switch (cmd) {{
                 case "help":
-                    ctx.ui.notify("gf commands:\n/build, /query, /path, /explain, /report", "info");
+                    ctx.ui.notify("garfield commands:\n/build, /query, /path, /explain, /report", "info");
                     break;
-                case "report": {{
-                    const report = loadGraph();
-                    if (report) {{
-                        ctx.ui.notify(`Graph: ${{report.metadata?.total_nodes || 0}} nodes, ${{report.metadata?.total_edges || 0}} edges`, "info");
+                case "build": {{
+                    const path = parts[1] || ".";
+                    const update = parts.includes("--update");
+                    ctx.ui.notify(`Building graph from ${{path}}...`, "info");
+                    const result = runGarfield(["build", path, ...(update ? ["--update"] : [])]);
+                    if (result.code === 0) {{
+                        ctx.ui.notify("Build complete!", "success");
                     }} else {{
-                        ctx.ui.notify("No graph found. Run /gf build first.", "warning");
+                        ctx.ui.notify("Build failed: " + result.stderr, "error");
+                    }}
+                    break;
+                }}
+                case "query": {{
+                    const question = parts.slice(1).join(" ");
+                    if (!question) {{
+                        ctx.ui.notify("Usage: /garfield query \"question\"", "error");
+                        break;
+                    }}
+                    const result = runGarfield(["query", question]);
+                    ctx.ui.notify(result.stdout || result.stderr || "No results", result.code === 0 ? "info" : "error");
+                    break;
+                }}
+                case "path": {{
+                    const source = parts[1];
+                    const target = parts[2];
+                    if (!source || !target) {{
+                        ctx.ui.notify("Usage: /garfield path \"A\" \"B\"", "error");
+                        break;
+                    }}
+                    const result = runGarfield(["path", source, target]);
+                    ctx.ui.notify(result.stdout || result.stderr || "No path found", result.code === 0 ? "info" : "error");
+                    break;
+                }}
+                case "explain": {{
+                    const name = parts.slice(1).join(" ");
+                    if (!name) {{
+                        ctx.ui.notify("Usage: /garfield explain \"NodeName\"", "error");
+                        break;
+                    }}
+                    const result = runGarfield(["explain", name]);
+                    ctx.ui.notify(result.stdout || result.stderr || "Node not found", result.code === 0 ? "info" : "error");
+                    break;
+                }}
+                case "report": {{
+                    if (existsSync(GRAPH_REPORT)) {{
+                        const report = readFileSync(GRAPH_REPORT, "utf-8");
+                        ctx.ui.notify(report.substring(0, 500) + "...", "info");
+                    }} else {{
+                        ctx.ui.notify("No graph found. Run /garfield build first.", "warning");
+                    }}
+                    break;
+                }}
+                case ".": {{
+                    // Shortcut for /garfield . (build current directory)
+                    ctx.ui.notify("Building graph from current directory...", "info");
+                    const result = runGarfield(["build", "."]);
+                    if (result.code === 0) {{
+                        ctx.ui.notify("Build complete!", "success");
+                    }} else {{
+                        ctx.ui.notify("Build failed: " + result.stderr, "error");
                     }}
                     break;
                 }}
                 default:
-                    ctx.ui.notify("Run /gf help for available commands", "info");
+                    ctx.ui.notify("Run /garfield help for available commands", "info");
             }}
         }},
     }});
 
-    // gf_build tool
+    // Alias /gf to /garfield
+    pi.registerCommand("gf", {{
+        description: "Alias for /garfield",
+        handler: async (args, ctx) => {{
+            // Delegate to garfield command
+            const parts = args.trim().split(/\s+/).filter(Boolean);
+            if (parts[0] === "." && parts.length === 1) {{
+                ctx.ui.notify("Building graph from current directory...", "info");
+                const result = runGarfield(["build", "."]);
+                if (result.code === 0) {{
+                    ctx.ui.notify("Build complete!", "success");
+                }} else {{
+                    ctx.ui.notify("Build failed: " + result.stderr, "error");
+                }}
+            }} else {{
+                ctx.ui.notify("Use /garfield instead", "info");
+            }}
+        }},
+    }});
+
+    // garfield_build tool
     pi.registerTool({{
-        name: "gf_build",
+        name: "garfield_build",
         label: "Garfield Build",
         description: "Build Garfield knowledge graph from source code",
         parameters: Type.Object({{
@@ -446,23 +726,28 @@ export default function garfieldExtension(pi: ExtensionAPI) {{
             update: Type.Optional(Type.Boolean()),
         }}),
         async execute(toolCallId, params) {{
-            const graph = loadGraph();
-            if (graph) {{
+            const path = params.path || ".";
+            const update = params.update || false;
+            
+            const result = runGarfield(["build", path, ...(update ? ["--update"] : [])]);
+            
+            if (result.code === 0) {{
+                const graph = loadGraph();
                 return {{
-                    content: [{{ type: "text", text: `Graph already exists: ${{graph.metadata?.total_nodes}} nodes` }}],
-                    details: graph.metadata,
+                    content: [{{ type: "text", text: `Graph built: ${{graph?.metadata?.total_nodes || 0}} nodes, ${{graph?.metadata?.total_edges || 0}} edges` }}],
+                    details: graph?.metadata,
                 }};
             }}
             return {{
-                content: [{{ type: "text", text: "Run 'gf build <path>' in terminal first" }}],
-                details: {{ error: "no_graph" }},
+                content: [{{ type: "text", text: "Build failed: " + result.stderr }}],
+                details: {{ error: result.stderr }},
             }};
         }},
     }});
 
-    // gf_graph_query tool
+    // garfield_graph_query tool
     pi.registerTool({{
-        name: "gf_graph_query",
+        name: "garfield_graph_query",
         label: "Garfield Query",
         description: "Query Garfield knowledge graph for code relationships",
         parameters: Type.Object({{
@@ -474,7 +759,7 @@ export default function garfieldExtension(pi: ExtensionAPI) {{
             const graph = loadGraph();
             if (!graph) {{
                 return {{
-                    content: [{{ type: "text", text: "No graph found. Run 'gf build' first." }}],
+                    content: [{{ type: "text", text: "No graph found. Run 'garfield build' first." }}],
                     details: {{ error: "no_graph" }},
                 }};
             }}
@@ -497,9 +782,9 @@ export default function garfieldExtension(pi: ExtensionAPI) {{
         }},
     }});
 
-    // gf_path tool
+    // garfield_path tool
     pi.registerTool({{
-        name: "gf_path",
+        name: "garfield_path",
         label: "Garfield Path",
         description: "Find shortest path between nodes",
         parameters: Type.Object({{
@@ -507,30 +792,13 @@ export default function garfieldExtension(pi: ExtensionAPI) {{
             target: Type.String(),
         }}),
         async execute(toolCallId, params) {{
-            const graph = loadGraph();
-            if (!graph) {{
-                return {{
-                    content: [{{ type: "text", text: "No graph found" }}],
-                    details: {{ error: "no_graph" }},
-                }};
-            }}
-            
-            const source = graph.nodes.find(n => n.label.toLowerCase().includes(params.source.toLowerCase()));
-            const target = graph.nodes.find(n => n.label.toLowerCase().includes(params.target.toLowerCase()));
-            
-            if (!source || !target) {{
-                return {{
-                    content: [{{ type: "text", text: "Source or target not found" }}],
-                    details: {{ error: "not_found" }},
-                }};
-            }}
-            
+            const result = runGarfield(["path", params.source, params.target]);
             return {{
                 content: [{{ 
                     type: "text", 
-                    text: `Run 'gf path "${{source.label}}" "${{target.label}}"' in terminal` 
+                    text: result.stdout || result.stderr || "No path found"
                 }}],
-                details: {{ source: source.label, target: target.label }},
+                details: {{ code: result.code }},
             }};
         }},
     }});
@@ -538,59 +806,12 @@ export default function garfieldExtension(pi: ExtensionAPI) {{
 "#, exe_path = exe_path)
 }
 
-/// Generate AGENTS.md content
-fn generate_agents_md(gf_binary: &str) -> String {
-    format!(r#"# Garfield Knowledge Graph
-
-Garfield is a fast Rust-based code knowledge graph builder.
-
-## Commands
-
-```bash
-# Build knowledge graph
-{gf_binary} build <path>          # Full build
-{gf_binary} build <path> --update # Incremental build
-
-# Query
-{gf_binary} query "function_name" # BFS traversal
-{gf_binary} query "X" --dfs       # DFS traversal
-
-# Find paths
-{gf_binary} path "A" "B"         # Shortest path A → B
-
-# Explain
-{gf_binary} explain "NodeName"    # Node details
-```
-
-## When to Use
-
-- Understanding codebase architecture
-- Finding what connects A to B
-- Identifying god nodes and key abstractions
-- Before modifying unfamiliar code
-
-## Workflow
-
-```
-1. {gf_binary} build . (if no graph exists)
-2. {gf_binary} query "what connects X to Y?"
-3. {gf_binary} path "X" "Y" (find direct path)
-4. {gf_binary} explain "NodeName" (node details)
-```
-
-## Output
-
-- `graphify-out/graph.json` - Knowledge graph
-- `graphify-out/GRAPH_REPORT.md` - Human-readable report
-"#, gf_binary = gf_binary)
-}
-
 /// Generate Claude Desktop MCP config
-fn generate_mcp_config(graph_json_path: &str, gf_binary: &str) -> String {
+fn generate_mcp_config(graph_json_path: &str, garfield_binary: &str) -> String {
     let config = serde_json::json!({
         "mcpServers": {
             "garfield": {
-                "command": gf_binary,
+                "command": garfield_binary,
                 "args": ["serve", graph_json_path]
             }
         }
@@ -605,16 +826,24 @@ mod tests {
     
     #[test]
     fn test_generate_extension() {
-        let ext = generate_extension_ts("/usr/local/bin/gf");
+        let ext = generate_extension_ts("/usr/local/bin/garfield");
         assert!(ext.contains("garfieldExtension"));
-        assert!(ext.contains("gf_build"));
-        assert!(ext.contains("gf_graph_query"));
+        assert!(ext.contains("garfield_build"));
+        assert!(ext.contains("garfield_graph_query"));
     }
     
     #[test]
     fn test_generate_mcp_config() {
-        let config = generate_mcp_config("/path/to/graph.json", "gf");
+        let config = generate_mcp_config("/path/to/graph.json", "garfield");
         assert!(config.contains("garfield"));
-        assert!(config.contains("gf"));
+        assert!(config.contains("serve"));
+    }
+    
+    #[test]
+    fn test_remove_garfield_section() {
+        let content = "# Header\n\n## garfield\n\ncontent here\n\n## Other\n\nmore content";
+        let result = remove_garfield_section(content);
+        assert!(!result.contains("garfield"));
+        assert!(result.contains("Other"));
     }
 }

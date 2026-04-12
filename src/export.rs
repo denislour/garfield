@@ -41,19 +41,19 @@ pub fn export_stats(graph: &GraphData, output_path: &Path) -> anyhow::Result<()>
     
     use crate::types::Confidence;
     
-    let extracted = graph.edges.iter()
+    let extracted = graph.links.iter()
         .filter(|e| matches!(e.confidence, Confidence::Extracted))
         .count();
-    let inferred = graph.edges.iter()
+    let inferred = graph.links.iter()
         .filter(|e| matches!(e.confidence, Confidence::Inferred))
         .count();
-    let ambiguous = graph.edges.iter()
+    let ambiguous = graph.links.iter()
         .filter(|e| matches!(e.confidence, Confidence::Ambiguous))
         .count();
     
     let stats = Stats {
         total_nodes: graph.nodes.len(),
-        total_edges: graph.edges.len(),
+        total_edges: graph.links.len(),
         communities: graph.metadata.communities,
         extracted_edges: extracted,
         inferred_edges: inferred,
@@ -93,6 +93,6 @@ mod tests {
         // Deserialize
         let loaded: GraphData = serde_json::from_str(&json).unwrap();
         assert_eq!(loaded.nodes.len(), 2);
-        assert_eq!(loaded.edges.len(), 1);
+        assert_eq!(loaded.links.len(), 1);
     }
 }
