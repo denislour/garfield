@@ -144,6 +144,15 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         node_kinds: vec!["function_declaration", "local_function_declaration"],
     });
 
+    // PHP
+    m.insert("php", LangConfig {
+        name: "php",
+        extensions: vec!["php"],
+        comment_style: CommentStyle::CStyle,
+        import_kinds: vec!["use_declaration", "use_group_declaration"],
+        node_kinds: vec!["class_declaration", "trait_declaration", "interface_declaration", "method_declaration", "function_definition"],
+    });
+
     // Bash/Shell
     m.insert("bash", LangConfig {
         name: "bash",
