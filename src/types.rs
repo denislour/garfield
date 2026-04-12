@@ -23,6 +23,12 @@ pub struct Node {
     pub community: Option<u32>,
     #[serde(default)]
     pub node_type: Option<String>,
+    /// File type (for rationale nodes)
+    #[serde(default)]
+    pub file_type: Option<FileType>,
+    /// File stem (module name)
+    #[serde(default)]
+    pub file_stem: Option<String>,
 }
 
 impl Node {
@@ -35,17 +41,25 @@ impl Node {
             source_location,
             community: None,
             node_type: None,
+            file_type: None,
+            file_stem: None,
         }
     }
 }
 
 /// Một edge trong graph
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge {
     pub source: String,
     pub target: String,
     pub relation: String,
     pub confidence: Confidence,
+    #[serde(default)]
+    pub confidence_score: f64,
+    #[serde(default)]
+    pub source_file: String,
+    #[serde(default)]
+    pub note: Option<String>,
 }
 
 impl Edge {
@@ -56,6 +70,72 @@ impl Edge {
             target,
             relation,
             confidence,
+            confidence_score: match confidence {
+                Confidence::Extracted => 1.0,
+                Confidence::Inferred => 0.75,
+                Confidence::Ambiguous => 0.2,
+            },
+            source_file: String::new(),
+            note: None,
+        }
+    }
+
+    /// Create with all fields
+    pub fn with_details(
+        source: String,
+        target: String,
+        relation: String,
+        confidence: Confidence,
+        confidence_score: f64,
+        source_file: String,
+        note: Option<String>,
+    ) -> Self {
+        Self {
+            source,
+            target,
+            relation,
+            confidence,
+            confidence_score,
+            source_file,
+            note,
+        }
+    }
+}
+
+/// Hyperedge - a relationship among 3+ nodes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Hyperedge {
+    pub id: String,
+    pub label: String,
+    pub nodes: Vec<String>,
+    pub relation: String,
+    pub confidence: Confidence,
+    #[serde(default)]
+    pub confidence_score: f64,
+    pub source_file: String,
+}
+
+impl Hyperedge {
+    pub fn new(
+        id: String,
+        label: String,
+        nodes: Vec<String>,
+        relation: String,
+        confidence: Confidence,
+        source_file: String,
+    ) -> Self {
+        Self {
+            id,
+            label,
+            nodes,
+            relation,
+            confidence,
+            confidence_score: match confidence {
+                Confidence::Extracted => 1.0,
+                Confidence::Inferred => 0.75,
+                Confidence::Ambiguous => 0.2,
+            },
+            source_file,
         }
     }
 }
@@ -66,6 +146,8 @@ pub struct ExtractionResult {
     pub nodes: Vec<Node>,
     #[serde(alias = "edges", rename = "links")]
     pub links: Vec<Edge>,
+    #[serde(default)]
+    pub hyperedges: Vec<Hyperedge>,
 }
 
 impl ExtractionResult {
@@ -84,10 +166,16 @@ impl ExtractionResult {
         self.links.push(edge);
     }
 
+    /// Add a hyperedge
+    pub fn add_hyperedge(&mut self, hyperedge: Hyperedge) {
+        self.hyperedges.push(hyperedge);
+    }
+
     /// Merge another extraction result into this one
     pub fn merge(&mut self, other: ExtractionResult) {
         self.nodes.extend(other.nodes);
         self.links.extend(other.links);
+        self.hyperedges.extend(other.hyperedges);
     }
 }
 
@@ -119,6 +207,8 @@ pub struct GraphData {
     #[serde(alias = "edges", rename = "links")]
     pub links: Vec<Edge>,
     pub metadata: GraphMetadata,
+    #[serde(default)]
+    pub hyperedges: Vec<Hyperedge>,
 }
 
 impl GraphData {
@@ -126,11 +216,12 @@ impl GraphData {
     pub fn new(nodes: Vec<Node>, links: Vec<Edge>, communities: usize) -> Self {
         let total_nodes = nodes.len();
         let total_edges = links.len();
-        
+
         Self {
             metadata: GraphMetadata::new(total_nodes, total_edges, communities),
             nodes,
             links,
+            hyperedges: Vec::new(),
         }
     }
 }
@@ -154,11 +245,14 @@ pub struct BuildSummary {
 }
 
 /// File type classification
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum FileType {
     Code,
     Markdown,
     Binary,
+    /// Rationale/docstring nodes extracted from source code
+    Rationale,
 }
 
 /// Detected file
@@ -182,9 +276,7 @@ pub struct DetectStats {
 /// Get current timestamp
 pub fn chrono_now() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let duration = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap();
+    let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     format!("{}", duration.as_secs())
 }
 
@@ -200,7 +292,7 @@ mod tests {
             "test.py".to_string(),
             "L1".to_string(),
         );
-        
+
         assert_eq!(node.id, "test.py:main");
         assert_eq!(node.label, "main");
         assert!(node.community.is_none());
@@ -214,22 +306,59 @@ mod tests {
             "calls".to_string(),
             Confidence::Extracted,
         );
-        
+
         assert_eq!(edge.relation, "calls");
+        assert_eq!(edge.confidence_score, 1.0);
+    }
+
+    #[test]
+    fn test_edge_with_details() {
+        let edge = Edge::with_details(
+            "a.py:foo".to_string(),
+            "b.py:bar".to_string(),
+            "semantically_similar_to".to_string(),
+            Confidence::Inferred,
+            0.85,
+            "a.py".to_string(),
+            Some("Both handle user validation".to_string()),
+        );
+
+        assert_eq!(edge.confidence_score, 0.85);
+        assert!(edge.note.is_some());
+    }
+
+    #[test]
+    fn test_hyperedge_creation() {
+        let hyperedge = Hyperedge::new(
+            "auth_protocol".to_string(),
+            "Authentication Protocol".to_string(),
+            vec![
+                "auth.py:login".to_string(),
+                "auth.py:verify".to_string(),
+                "auth.py:logout".to_string(),
+            ],
+            "participate_in".to_string(),
+            Confidence::Extracted,
+            "auth.py".to_string(),
+        );
+
+        assert_eq!(hyperedge.nodes.len(), 3);
+        assert_eq!(hyperedge.confidence_score, 1.0);
     }
 
     #[test]
     fn test_extraction_result() {
         let mut result = ExtractionResult::new();
-        
+
         result.add_node(Node::new(
             "test.py:foo".to_string(),
             "foo".to_string(),
             "test.py".to_string(),
             "L1".to_string(),
         ));
-        
+
         assert_eq!(result.nodes.len(), 1);
         assert_eq!(result.links.len(), 0);
+        assert_eq!(result.hyperedges.len(), 0);
     }
 }
