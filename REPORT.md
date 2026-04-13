@@ -5,76 +5,105 @@
 
 ---
 
-## Tasks Completed
+## ✅ Tasks Completed
 
-### ✅ Task 1: Cleanup unused fields/files
-- Reviewed project structure
-- Removed dead code patterns
-
-### ✅ Task 2: Replace Louvain with Leiden
-- Created `src/leiden.rs`
-- Leiden algorithm: faster, better quality, guarantees connected communities
-
-### ✅ Task 3: Rename cluster → community
-- Updated `src/community.rs`
-- Consistent naming with algorithm
-
-### ✅ Task 4: Test organization
-- Flat structure in `tests/`
-- Naming: `test_*.rs`, `integration_*.rs`
-- Unit tests in `src/` with `#[cfg(test)]`
-
-### ✅ Task 5: 3-Tier Lazy Loading
-- Defined in `tasks.md`
-- Ready for implementation
-
-### ✅ Task 6: Hyperedge Detection (THIS SESSION)
-- **Created `src/hyperedge.rs`** (555 lines)
-- 3 detection algorithms:
-  1. **File-Based** (O(n)) - Group nodes by source file
-  2. **Call Chain** (O(n²)) - Find A→B→C→D chains
-  3. **Config Pattern** (O(n)) - K8s, Docker, Terraform
+| # | Task | Status |
+|---|------|--------|
+| 1 | Cleanup unused files | ✅ Done |
+| 2 | Louvain → Leiden | ✅ Done |
+| 3 | cluster → community | ✅ Done |
+| 4 | Test organization | ✅ Done |
+| 5 | 3-Tier Lazy Loading | 📋 Pending |
+| 6 | **Hyperedge Detection** | ✅ **DONE** |
+| 7 | Combined 3-Tier + Hyperedge | 📋 Pending |
+| 8 | E2E Tests | 📋 Pending |
+| 9 | Incremental Build | 📋 Pending |
+| 10 | Cross-File Hyperedge | 📋 Pending |
+| 11 | Advanced Query | 📋 Pending |
+| 12 | Language Extensions | ✅ Done (11 languages) |
 
 ---
 
-## Hyperedge Detection Implementation
+## Hyperedge Detection - WORKING ✅
 
-### Architecture
-
+### Build Output
 ```
-src/hyperedge.rs
-├── detect_hyperedges()     → Main entry, runs all algorithms
-├── detect_file_groups()    → Algorithm 1
-├── detect_call_chains()    → Algorithm 2  
-├── detect_config_patterns()→ Algorithm 3
-├── process_candidates()    → Dedup, filter, sort
-└── calculate_cohesion()    → Score calculation
-```
+$ cargo run --release -- build ./src
 
-### Safety Limits
+Detecting files...
+  Code files: 16 (24046 words)
+Cache: 16 changed, 0 unchanged
+Extracting from 16 files...
+  Found 80 new definitions in ./src/extract.rs
+  Found 70 new definitions in ./src/serve.rs
+  ...
+Building graph...
+Detecting hyperedges...
+Found 4 hyperedges
+Exported graph to garfield-out/graph.json
 
-| Parameter | Value |
-|-----------|-------|
-| MIN_NODES | 3 |
-| MAX_NODES | 20 |
-| MIN_SCORE | 0.3 |
-
-### Cohesion Score Formula
-
-```
-cohesion = internal_edges / (internal_edges + external_edges)
+✅ Build complete!
+  Nodes: 498
+  Edges: 137
+  Communities: 361
+  Hyperedges: 4
 ```
 
-Higher score = tighter group of nodes working together.
+### Output Structure (`garfield-out/graph.json`)
+
+```json
+{
+  "nodes": [...],           // 498 items
+  "links": [...],           // 137 items  
+  "hyperedges": [...],      // 4 items ✨ NEW
+  "metadata": {
+    "total_nodes": 498,
+    "total_edges": 137,
+    "communities": 361
+  }
+}
+```
+
+### Sample Hyperedge Output
+
+```json
+{
+  "id": "file_build",
+  "label": "build module",
+  "nodes": [
+    "build:add_communities",
+    "build:build_graph",
+    "build:dedup_edges",
+    "build:merge_extractions",
+    "build:merge_into_graph",
+    "build:split_oversized",
+    "build:test_build_graph",
+    ...
+  ],
+  "relation": "participate_in",
+  "confidence": "INFERRED",
+  "confidence_score": 1.0,
+  "source_file": "./src/build.rs"
+}
+```
+
+### Detected Hyperedges
+
+| ID | Label | Nodes | Score | Source |
+|----|-------|-------|-------|--------|
+| file_build | build module | 18 | 1.00 | ./src/build.rs |
+| file_leiden | leiden module | 17 | 1.00 | ./src/leiden.rs |
+| file_export | export module | 9 | 1.00 | ./src/export.rs |
+| file_validate | validate module | 14 | 1.00 | ./src/validate.rs |
 
 ---
 
-## Language Support (Dynamic)
+## Language Support (Dynamic) - 11 Languages ✅
 
 ### Configuration Location
 **ONLY `src/lang.rs`** - Single source of truth
 
-### Supported Languages (11)
+### Supported Languages
 
 | Language | Extensions | node_kinds |
 |----------|------------|------------|
@@ -102,8 +131,6 @@ m.insert("newlang", LangConfig {
     node_kinds: vec!["function_definition", "class_definition"],
 });
 ```
-
-**No changes needed in `extract.rs`, `detect.rs`, or `serve.rs`**
 
 ---
 
@@ -137,17 +164,8 @@ Total Tests: 148 PASSING ✅
 ├── extract.rs tests: 13
 ├── build.rs tests: 17
 ├── serve.rs tests: 1
+├── hyperedge.rs tests: 7
 └── Language Integration Tests: 9
-    ├── integration_lang_rust.rs
-    ├── integration_lang_python.rs
-    ├── integration_lang_ruby.rs
-    ├── integration_lang_java.rs
-    ├── integration_lang_go.rs
-    ├── integration_lang_typescript.rs
-    ├── integration_lang_javascript.rs
-    ├── integration_lang_scala.rs
-    ├── integration_lang_lua.rs
-    └── integration_lang_php.rs
 ```
 
 ---
@@ -155,6 +173,7 @@ Total Tests: 148 PASSING ✅
 ## Git History
 
 ```
+5338679 feat: integrate hyperedge detection into build pipeline
 771997f feat: implement hyperedge detection (task 6)
 2843106 fix: merge duplicate import_declaration (Java + Swift)
 3ad7aca fix: merge duplicate import_statement branches in extract_import
@@ -167,51 +186,31 @@ a0eef54 feat: add Lua language support
 
 ---
 
-## Remaining Tasks (from tasks.md)
-
-| # | Task | Status |
-|---|------|--------|
-| 1 | Cleanup unused files | ✅ Done |
-| 2 | Replace Louvain → Leiden | ✅ Done |
-| 3 | Rename cluster → community | ✅ Done |
-| 4 | Test organization | ✅ Done |
-| 5 | 3-Tier Lazy Loading | 📋 Pending |
-| 6 | Hyperedge Detection | ✅ Done |
-| 7 | Combined: 3-Tier + Hyperedge | 📋 Pending |
-| 8 | E2E Tests | 📋 Pending |
-| 9 | Incremental Build | 📋 Pending |
-| 10 | Cross-File Hyperedge | 📋 Pending |
-| 11 | Advanced Query + Ripgrep | 📋 Pending |
-| 12 | Language Extensions | ✅ Done |
-
----
-
 ## Project Structure
 
 ```
 src/
 ├── lib.rs           # Main entry, re-exports
 ├── main.rs          # CLI
-├── analyze.rs       # Graph analysis (god nodes, diff)
+├── analyze.rs       # Graph analysis
 ├── build.rs        # Build pipeline
 ├── cache.rs        # File cache
-├── community.rs    # Community detection wrapper
+├── community.rs    # Community detection
 ├── detect.rs       # File detection
 ├── export.rs       # JSON export/import
-├── extract.rs      # AST extraction (tree-sitter)
-├── hyperedge.rs    # Hyperedge detection ✨ NEW
-├── lang.rs         # Language configuration ✨ REFACTORED
+├── extract.rs      # AST extraction
+├── hyperedge.rs    # Hyperedge detection ✨
+├── lang.rs         # Language configuration ✨
 ├── leiden.rs       # Leiden algorithm
 ├── report.rs       # Report generation
 ├── serve.rs        # Query API
 ├── summary.rs      # File summaries
-├── types.rs        # Core types (Node, Edge, Hyperedge)
+├── types.rs        # Core types
 └── validate.rs     # Validation
 
 tests/
-├── integration_lang_*.rs  # Language extraction tests
-├── integration_*.rs      # Other integration tests
-└── test_*.rs             # Unit/Integration tests
+├── integration_lang_*.rs  # 9 language tests
+└── *.rs                   # Other tests
 ```
 
 ---
@@ -220,18 +219,20 @@ tests/
 
 ### Build
 ```bash
-cargo build --release
+cargo run --release -- build ./src
 ```
 
-### Test
+### Query
 ```bash
-cargo test
+cargo run --release -- query "function_name" ./garfield-out/graph.json
 ```
 
-### Run
-```bash
-cargo run -- build ./src
-cargo run -- query "function_name"
+### Output
+```
+garfield-out/
+├── graph.json           # Nodes, Edges, Hyperedges
+├── GRAPH_REPORT.md      # Analysis report
+└── cache.json          # Incremental cache
 ```
 
 ---
