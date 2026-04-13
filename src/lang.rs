@@ -162,6 +162,42 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
         node_kinds: vec!["function_definition"],
     });
 
+    // Zig
+    m.insert("zig", LangConfig {
+        name: "zig",
+        extensions: vec!["zig"],
+        comment_style: CommentStyle::CStyle,
+        import_kinds: vec!["usingnamespace", "const_declaration", "comptime"],
+        node_kinds: vec!["function_declaration", "method_definition", "struct", "enum", "union"],
+    });
+
+    // Elixir
+    m.insert("elixir", LangConfig {
+        name: "elixir",
+        extensions: vec!["ex", "exs"],
+        comment_style: CommentStyle::Hash,
+        import_kinds: vec!["import", "require", "alias", "use"],
+        node_kinds: vec!["module", "function", "clauses", "do_block"],
+    });
+
+    // Kotlin
+    m.insert("kotlin", LangConfig {
+        name: "kotlin",
+        extensions: vec!["kt", "kts"],
+        comment_style: CommentStyle::CStyle,
+        import_kinds: vec!["import_directive"],
+        node_kinds: vec!["class", "function_declaration", "method_declaration", "object_declaration"],
+    });
+
+    // Swift
+    m.insert("swift", LangConfig {
+        name: "swift",
+        extensions: vec!["swift"],
+        comment_style: CommentStyle::CStyle,
+        import_kinds: vec!["import_declaration"],
+        node_kinds: vec!["class_declaration", "struct_declaration", "function_declaration", "method_declaration"],
+    });
+
     m
 });
 
