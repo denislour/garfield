@@ -151,8 +151,7 @@ pub fn generate_report(
     if analysis.confidence_stats.inferred > 0 {
         content.push_str(&format!(
             " · INFERRED: {} edges (avg confidence: {:.2})",
-            analysis.confidence_stats.inferred,
-            0.85
+            analysis.confidence_stats.inferred, 0.85
         ));
     }
     content.push_str("\n");
@@ -223,21 +222,18 @@ pub fn generate_report(
         let real_nodes: Vec<_> = graph
             .nodes
             .iter()
-            .filter(|n| {
-                n.community == Some(**cid)
-                    && !is_filtered_node(&n.label)
-            })
+            .filter(|n| n.community == Some(**cid) && !is_filtered_node(&n.label))
             .take(10)
             .collect();
 
         let real_size = real_nodes.len();
-        let display_nodes: Vec<_> = real_nodes
-            .iter()
-            .map(|n| n.label.as_str())
-            .collect();
+        let display_nodes: Vec<_> = real_nodes.iter().map(|n| n.label.as_str()).collect();
 
         let suffix = if real_size > 10 {
-            format!(" (+{} more)", analysis.community_sizes.get(cid).unwrap_or(&0) - 10)
+            format!(
+                " (+{} more)",
+                analysis.community_sizes.get(cid).unwrap_or(&0) - 10
+            )
         } else {
             String::new()
         };
@@ -253,7 +249,10 @@ pub fn generate_report(
 
         content.push_str(&format!(
             "### {} \"{}\" ({} nodes) {}\n",
-            cid, label, analysis.community_sizes.get(cid).unwrap_or(&0), cohesion_indicator
+            cid,
+            label,
+            analysis.community_sizes.get(cid).unwrap_or(&0),
+            cohesion_indicator
         ));
         content.push_str(&format!("**Cohesion:** {:.2}\n\n", cohesion));
         content.push_str(&format!(
@@ -275,7 +274,7 @@ pub fn generate_report(
     if !ambiguous_edges.is_empty() {
         content.push_str("## Ambiguous Edges - Review These\n\n");
         content.push_str("These edges have low confidence and need human verification:\n\n");
-        
+
         for edge in ambiguous_edges {
             let src_label = graph
                 .nodes
@@ -378,7 +377,11 @@ pub fn generate_report(
             if q.question.is_empty() {
                 continue;
             }
-            content.push_str(&format!("### {}. {}\n\n", i + 1, q.question_type.replace('_', " ")));
+            content.push_str(&format!(
+                "### {}. {}\n\n",
+                i + 1,
+                q.question_type.replace('_', " ")
+            ));
             content.push_str(&format!("**Q:** {}\n\n", q.question));
             content.push_str(&format!("**Why:** {}\n\n", q.why));
         }

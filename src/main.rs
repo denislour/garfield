@@ -91,7 +91,7 @@ enum Cli {
     },
 
     /// Get body (source code) of a function/method
-    /// 
+    ///
     /// Reads directly from source files
     Body {
         /// Node ID (format: file_stem:function_name)
@@ -172,12 +172,18 @@ fn main() {
             println!("Mode: {} (depth={}, budget={})\n", mode, depth, budget);
 
             // Check if any filters are active
-            let has_filters = node_type.is_some() || community.is_some() 
-                || source.is_some() || hyperedge.is_some();
+            let has_filters = node_type.is_some()
+                || community.is_some()
+                || source.is_some()
+                || hyperedge.is_some();
 
             let result = if has_filters {
                 garfield::run_query_with_filters(
-                    &graph, &question, dfs, depth, budget,
+                    &graph,
+                    &question,
+                    dfs,
+                    depth,
+                    budget,
                     node_type.as_deref(),
                     community,
                     source.as_deref(),
@@ -230,17 +236,15 @@ fn main() {
             }
         }
 
-        Cli::Explain { name, graph } => {
-            match garfield::run_explain(&graph, &name) {
-                Ok(result) => {
-                    println!("{}", result);
-                }
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    std::process::exit(1);
-                }
+        Cli::Explain { name, graph } => match garfield::run_explain(&graph, &name) {
+            Ok(result) => {
+                println!("{}", result);
             }
-        }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                std::process::exit(1);
+            }
+        },
 
         Cli::Body { node_id } => {
             println!("Getting body for: {}\n", node_id);
@@ -252,7 +256,9 @@ fn main() {
                 }
                 None => {
                     eprintln!("❌ Could not find body for: {}", node_id);
-                    eprintln!("  Make sure the node ID is correct (format: file_stem:function_name)");
+                    eprintln!(
+                        "  Make sure the node ID is correct (format: file_stem:function_name)"
+                    );
                     eprintln!("  Example: garfield body serve:find_shortest_path");
                     std::process::exit(1);
                 }

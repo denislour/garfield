@@ -1,5 +1,5 @@
 //! Leiden community detection algorithm
-//! 
+//!
 //! Leiden = Louvain + Refinement
 //! Paper: https://www.nature.com/articles/s41598-019-41695-z
 
@@ -19,7 +19,7 @@ pub fn leiden_communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<u32> {
     // Build adjacency list
     let mut neighbors: HashMap<usize, Vec<(usize, f64)>> = HashMap::new();
     let mut node_weights: Vec<f64> = vec![0.0; n];
-    
+
     for &(src, tgt, weight) in edges {
         neighbors.entry(src).or_default().push((tgt, weight));
         neighbors.entry(tgt).or_default().push((src, weight));
@@ -35,11 +35,11 @@ pub fn leiden_communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<u32> {
     let max_iterations = 10;
     for _ in 0..max_iterations {
         let mut moved = false;
-        
+
         for node in 0..n {
             let current_c = community[node];
             let k_i = node_weights[node];
-            
+
             if k_i == 0.0 {
                 continue;
             }
@@ -47,7 +47,7 @@ pub fn leiden_communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<u32> {
             // Calculate sum of weights to each neighbor community
             let mut comm_sums: HashMap<u32, f64> = HashMap::new();
             let mut current_comm_sum = 0.0;
-            
+
             if let Some(nbrs) = neighbors.get(&node) {
                 for &(nbr, weight) in nbrs {
                     let nbr_c = community[nbr];
@@ -68,13 +68,13 @@ pub fn leiden_communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<u32> {
                 if *c == current_c {
                     continue;
                 }
-                
+
                 let weight_from_c = current_comm_sum;
                 let community_weight_c = community_weights[*c as usize];
-                
+
                 // Modularity gain
-                let gain = (weight_to_c - weight_from_c) / m 
-                    - k_i * (community_weight_c - k_i) / (m * m);
+                let gain =
+                    (weight_to_c - weight_from_c) / m - k_i * (community_weight_c - k_i) / (m * m);
 
                 if gain > best_gain {
                     best_gain = gain;
@@ -91,7 +91,7 @@ pub fn leiden_communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<u32> {
                 moved = true;
             }
         }
-        
+
         if !moved {
             break;
         }
@@ -136,11 +136,7 @@ mod tests {
 
     #[test]
     fn test_triangle() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (1, 2, 1.0),
-            (0, 2, 1.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (1, 2, 1.0), (0, 2, 1.0)];
         let result = leiden_communities(3, &edges);
         // All in same community
         assert!(result.iter().all(|&c| c == result[0]));
@@ -155,10 +151,7 @@ mod tests {
 
     #[test]
     fn test_disconnected() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (2, 3, 1.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (2, 3, 1.0)];
         let result = leiden_communities(4, &edges);
         assert_eq!(result[0], result[1]);
         assert_eq!(result[2], result[3]);
@@ -166,12 +159,7 @@ mod tests {
 
     #[test]
     fn test_star_graph() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (0, 2, 1.0),
-            (0, 3, 1.0),
-            (0, 4, 1.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0), (0, 4, 1.0)];
         let result = leiden_communities(5, &edges);
         let unique: HashSet<u32> = result.iter().cloned().collect();
         // Star graph is connected

@@ -8,8 +8,10 @@ fn extract_from_source(source: &str) -> Vec<String> {
     let file_path = dir.path().join("Test.java");
     std::fs::write(&file_path, source).unwrap();
     let content = std::fs::read_to_string(&file_path).unwrap();
-    extract_file(&file_path, &content).unwrap()
-        .nodes.iter()
+    extract_file(&file_path, &content)
+        .unwrap()
+        .nodes
+        .iter()
         .map(|n| n.label.clone())
         .collect()
 }
@@ -52,9 +54,21 @@ class Order {
 }
 "#;
     let nodes = extract_from_source(source);
-    assert!(nodes.contains(&"OrderService".to_string()), "Should find OrderService");
+    assert!(
+        nodes.contains(&"OrderService".to_string()),
+        "Should find OrderService"
+    );
     assert!(nodes.contains(&"Order".to_string()), "Should find Order");
-    assert!(nodes.contains(&"createOrder".to_string()), "Should find createOrder");
-    assert!(nodes.contains(&"sendConfirmation".to_string()), "Should find sendConfirmation");
-    assert!(nodes.contains(&"addItem".to_string()), "Should find addItem");
+    assert!(
+        nodes.contains(&"createOrder".to_string()),
+        "Should find createOrder"
+    );
+    assert!(
+        nodes.contains(&"sendConfirmation".to_string()),
+        "Should find sendConfirmation"
+    );
+    assert!(
+        nodes.contains(&"addItem".to_string()),
+        "Should find addItem"
+    );
 }

@@ -121,8 +121,14 @@ pub fn find_god_nodes(graph: &GraphData, top_n: usize) -> Vec<GodNode> {
     for edge in &graph.links {
         *degree.entry(&edge.source).or_insert(0) += 1;
         *degree.entry(&edge.target).or_insert(0) += 1;
-        neighbors.entry(&edge.source).or_default().push(&edge.target);
-        neighbors.entry(&edge.target).or_default().push(&edge.source);
+        neighbors
+            .entry(&edge.source)
+            .or_default()
+            .push(&edge.target);
+        neighbors
+            .entry(&edge.target)
+            .or_default()
+            .push(&edge.source);
     }
 
     // Sort by degree
@@ -142,7 +148,11 @@ pub fn find_god_nodes(graph: &GraphData, top_n: usize) -> Vec<GodNode> {
                     .map(|ns| {
                         ns.iter()
                             .filter_map(|nid| {
-                                graph.nodes.iter().find(|n| &n.id == *nid).map(|n| n.label.clone())
+                                graph
+                                    .nodes
+                                    .iter()
+                                    .find(|n| &n.id == *nid)
+                                    .map(|n| n.label.clone())
                             })
                             .take(5)
                             .collect()
@@ -167,13 +177,13 @@ fn is_file_node(graph: &GraphData, node_id: &str) -> bool {
         None => return false,
     };
     let label = &node.label;
-    
+
     // Check if label matches source filename
     let source_file_name = std::path::Path::new(&node.source_file)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("");
-    
+
     label == source_file_name
 }
 
@@ -184,17 +194,19 @@ fn is_method_stub(graph: &GraphData, node_id: &str) -> bool {
         None => return false,
     };
     let label = &node.label;
-    
+
     // Method stubs: ".method_name()"
     if label.starts_with('.') && label.ends_with("()") {
         return true;
     }
-    
+
     // Check if degree is <= 1 and ends with "()"
-    let degree = graph.links.iter()
+    let degree = graph
+        .links
+        .iter()
         .filter(|e| e.source == node_id || e.target == node_id)
         .count();
-    
+
     degree <= 1 && label.ends_with("()")
 }
 
@@ -205,9 +217,10 @@ fn get_file_category(path: &str) -> &'static str {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    
+
     match ext.as_str() {
-        "py" | "js" | "ts" | "go" | "rs" | "java" | "rb" | "cs" | "kt" | "scala" | "php" | "swift" | "lua" | "zig" | "c" | "cpp" | "h" | "hpp" => "code",
+        "py" | "js" | "ts" | "go" | "rs" | "java" | "rb" | "cs" | "kt" | "scala" | "php"
+        | "swift" | "lua" | "zig" | "c" | "cpp" | "h" | "hpp" => "code",
         "md" | "markdown" | "txt" | "rst" => "doc",
         "pdf" => "paper",
         "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" => "image",
@@ -252,18 +265,22 @@ fn calculate_surprise_score(
     }
 
     // 2. Cross file-type bonus
-    let src_file = graph.nodes.iter()
+    let src_file = graph
+        .nodes
+        .iter()
         .find(|n| n.id == src)
         .map(|n| n.source_file.as_str())
         .unwrap_or("");
-    let tgt_file = graph.nodes.iter()
+    let tgt_file = graph
+        .nodes
+        .iter()
         .find(|n| n.id == tgt)
         .map(|n| n.source_file.as_str())
         .unwrap_or("");
-    
+
     let cat_src = get_file_category(src_file);
     let cat_tgt = get_file_category(tgt_file);
-    
+
     if cat_src != cat_tgt && cat_src != "other" && cat_tgt != "other" {
         score += 2;
         reasons.push(format!("crosses file types ({} → {})", cat_src, cat_tgt));
@@ -272,7 +289,7 @@ fn calculate_surprise_score(
     // 3. Cross-repo bonus
     let dir_src = get_top_level_dir(src_file);
     let dir_tgt = get_top_level_dir(tgt_file);
-    
+
     if !dir_src.is_empty() && !dir_tgt.is_empty() && dir_src != dir_tgt {
         score += 2;
         reasons.push("connects across different directories/repos".to_string());
@@ -285,9 +302,17 @@ fn calculate_surprise_score(
     }
 
     // 5. Peripheral→hub bonus
-    let deg_src = graph.links.iter().filter(|e| e.source == src || e.target == src).count();
-    let deg_tgt = graph.links.iter().filter(|e| e.source == tgt || e.target == tgt).count();
-    
+    let deg_src = graph
+        .links
+        .iter()
+        .filter(|e| e.source == src || e.target == src)
+        .count();
+    let deg_tgt = graph
+        .links
+        .iter()
+        .filter(|e| e.source == tgt || e.target == tgt)
+        .count();
+
     if (deg_src <= 2 && deg_tgt >= 5) || (deg_tgt <= 2 && deg_src >= 5) {
         score += 1;
         reasons.push("peripheral node unexpectedly reaches hub".to_string());
@@ -311,9 +336,9 @@ pub fn find_surprising_connections(graph: &GraphData) -> Vec<SurprisingConnectio
         .filter(|n| !n.source_file.is_empty())
         .map(|n| n.source_file.as_str())
         .collect();
-    
+
     let is_multi_source = source_files.len() > 1;
-    
+
     if is_multi_source {
         find_cross_file_surprises(graph)
     } else {
@@ -324,16 +349,16 @@ pub fn find_surprising_connections(graph: &GraphData) -> Vec<SurprisingConnectio
 /// Find surprising cross-file connections
 fn find_cross_file_surprises(graph: &GraphData) -> Vec<SurprisingConnection> {
     let mut candidates = Vec::new();
-    
+
     for edge in &graph.links {
         let src = edge.source.clone();
         let tgt = edge.target.clone();
-        
+
         // Skip structural relationships
         if ["imports", "imports_from", "contains", "method"].contains(&edge.relation.as_str()) {
             continue;
         }
-        
+
         // Get node info
         let src_node = match graph.nodes.iter().find(|n| n.id == src) {
             Some(n) => n,
@@ -343,27 +368,25 @@ fn find_cross_file_surprises(graph: &GraphData) -> Vec<SurprisingConnection> {
             Some(n) => n,
             None => continue,
         };
-        
+
         // Skip concept nodes and file nodes
         if is_file_node(graph, &src) || is_file_node(graph, &tgt) {
             continue;
         }
-        
+
         let src_file = &src_node.source_file;
         let tgt_file = &tgt_node.source_file;
-        
+
         // Skip same-file edges
         if src_file.is_empty() || tgt_file.is_empty() || src_file == tgt_file {
             continue;
         }
-        
+
         let src_comm = src_node.community.unwrap_or(0);
         let tgt_comm = tgt_node.community.unwrap_or(0);
-        
-        let (score, why) = calculate_surprise_score(
-            graph, &src, &tgt, edge, src_comm, tgt_comm
-        );
-        
+
+        let (score, why) = calculate_surprise_score(graph, &src, &tgt, edge, src_comm, tgt_comm);
+
         candidates.push(SurprisingConnection {
             source: src.clone(),
             target: tgt.clone(),
@@ -379,20 +402,19 @@ fn find_cross_file_surprises(graph: &GraphData) -> Vec<SurprisingConnection> {
             score,
         });
     }
-    
+
     // Sort by score descending
     candidates.sort_by(|a, b| {
-        b.score.cmp(&a.score)
-            .then_with(|| {
-                let order = |c: &Confidence| match c {
-                    Confidence::Ambiguous => 0,
-                    Confidence::Inferred => 1,
-                    Confidence::Extracted => 2,
-                };
-                order(&a.confidence).cmp(&order(&b.confidence))
-            })
+        b.score.cmp(&a.score).then_with(|| {
+            let order = |c: &Confidence| match c {
+                Confidence::Ambiguous => 0,
+                Confidence::Inferred => 1,
+                Confidence::Extracted => 2,
+            };
+            order(&a.confidence).cmp(&order(&b.confidence))
+        })
     });
-    
+
     candidates.into_iter().take(10).collect()
 }
 
@@ -400,16 +422,16 @@ fn find_cross_file_surprises(graph: &GraphData) -> Vec<SurprisingConnection> {
 fn find_cross_community_surprises(graph: &GraphData) -> Vec<SurprisingConnection> {
     let mut surprises = Vec::new();
     let mut seen_pairs: HashSet<(u32, u32)> = HashSet::new();
-    
+
     for edge in &graph.links {
         let src = edge.source.clone();
         let tgt = edge.target.clone();
-        
+
         // Skip structural relationships
         if ["imports", "imports_from", "contains", "method"].contains(&edge.relation.as_str()) {
             continue;
         }
-        
+
         let src_node = match graph.nodes.iter().find(|n| n.id == src) {
             Some(n) => n,
             None => continue,
@@ -418,31 +440,29 @@ fn find_cross_community_surprises(graph: &GraphData) -> Vec<SurprisingConnection
             Some(n) => n,
             None => continue,
         };
-        
+
         // Skip file nodes
         if is_file_node(graph, &src) || is_file_node(graph, &tgt) {
             continue;
         }
-        
+
         let src_comm = src_node.community.unwrap_or(0);
         let tgt_comm = tgt_node.community.unwrap_or(0);
-        
+
         // Skip same-community edges
         if src_comm == tgt_comm {
             continue;
         }
-        
+
         // Deduplicate by community pair
         let pair = (src_comm.min(tgt_comm), src_comm.max(tgt_comm));
         if seen_pairs.contains(&pair) {
             continue;
         }
         seen_pairs.insert(pair);
-        
-        let (score, why) = calculate_surprise_score(
-            graph, &src, &tgt, edge, src_comm, tgt_comm
-        );
-        
+
+        let (score, why) = calculate_surprise_score(graph, &src, &tgt, edge, src_comm, tgt_comm);
+
         surprises.push(SurprisingConnection {
             source: src.clone(),
             target: tgt.clone(),
@@ -458,7 +478,7 @@ fn find_cross_community_surprises(graph: &GraphData) -> Vec<SurprisingConnection
             score,
         });
     }
-    
+
     // Sort: AMBIGUOUS first, then INFERRED, then EXTRACTED
     surprises.sort_by(|a, b| {
         let order = |c: &Confidence| match c {
@@ -468,7 +488,7 @@ fn find_cross_community_surprises(graph: &GraphData) -> Vec<SurprisingConnection
         };
         order(&a.confidence).cmp(&order(&b.confidence))
     });
-    
+
     surprises.into_iter().take(10).collect()
 }
 
@@ -546,7 +566,10 @@ fn calculate_cohesion_scores(graph: &GraphData) -> HashMap<u32, f64> {
                     let neighbor_idx = nodes.iter().position(|n| *n == neighbor);
                     if let Some(ni) = neighbor_idx {
                         if ni > node_idx
-                            && graph.nodes.iter().any(|n| n.id == neighbor && n.community == Some(*comm))
+                            && graph
+                                .nodes
+                                .iter()
+                                .any(|n| n.id == neighbor && n.community == Some(*comm))
                         {
                             actual_edges += 1;
                         }
@@ -599,11 +622,28 @@ pub fn generate_community_labels(
         // Strategy 2: Most frequent term in labels
         let mut term_counts: HashMap<String, usize> = HashMap::new();
         let noise_terms = [
-            "util", "helper", "manager", "handler", "service", "controller",
-            "model", "view", "index", "main", "init", "config", "setup",
-            "base", "common", "core", "data", "info", "params", "args",
+            "util",
+            "helper",
+            "manager",
+            "handler",
+            "service",
+            "controller",
+            "model",
+            "view",
+            "index",
+            "main",
+            "init",
+            "config",
+            "setup",
+            "base",
+            "common",
+            "core",
+            "data",
+            "info",
+            "params",
+            "args",
         ];
-        
+
         for node in &comm_nodes {
             let label_lower = node.label.to_lowercase();
             for word in label_lower.split('_') {
@@ -626,24 +666,37 @@ pub fn generate_community_labels(
         }
 
         // Choose best label
-        let label = if let Some((prefix, count)) = file_prefixes.into_iter().max_by_key(|(_, c)| *c) {
+        let label = if let Some((prefix, count)) = file_prefixes.into_iter().max_by_key(|(_, c)| *c)
+        {
             if count * 2 >= size {
-                prefix.split('/').last().map(|s| {
-                    s.split('_')
-                        .map(|part| part.chars().next().unwrap().to_uppercase().to_string() + &part[1..])
-                        .collect::<Vec<_>>()
-                        .join("")
-                }).unwrap_or_else(|| format!("Community {}", comm))
+                prefix
+                    .split('/')
+                    .last()
+                    .map(|s| {
+                        s.split('_')
+                            .map(|part| {
+                                part.chars().next().unwrap().to_uppercase().to_string() + &part[1..]
+                            })
+                            .collect::<Vec<_>>()
+                            .join("")
+                    })
+                    .unwrap_or_else(|| format!("Community {}", comm))
             } else {
-                term_counts.into_iter()
+                term_counts
+                    .into_iter()
                     .max_by_key(|(_, c)| *c)
-                    .map(|(term, _)| term.chars().next().unwrap().to_uppercase().to_string() + &term[1..])
+                    .map(|(term, _)| {
+                        term.chars().next().unwrap().to_uppercase().to_string() + &term[1..]
+                    })
                     .unwrap_or_else(|| format!("Community {}", comm))
             }
         } else {
-            term_counts.into_iter()
+            term_counts
+                .into_iter()
                 .max_by_key(|(_, c)| *c)
-                .map(|(term, _)| term.chars().next().unwrap().to_uppercase().to_string() + &term[1..])
+                .map(|(term, _)| {
+                    term.chars().next().unwrap().to_uppercase().to_string() + &term[1..]
+                })
                 .unwrap_or_else(|| format!("Community {}", comm))
         };
 
@@ -656,43 +709,57 @@ pub fn generate_community_labels(
 /// Generate suggested questions based on graph analysis
 pub fn suggest_questions(graph: &GraphData, top_n: usize) -> Vec<SuggestedQuestion> {
     let mut questions = Vec::new();
-    
+
     // 1. AMBIGUOUS edges
     for edge in &graph.links {
         if edge.confidence == Confidence::Ambiguous {
-            let src_label = graph.nodes.iter()
+            let src_label = graph
+                .nodes
+                .iter()
                 .find(|n| n.id == edge.source)
                 .map(|n| n.label.as_str())
                 .unwrap_or(&edge.source);
-            let tgt_label = graph.nodes.iter()
+            let tgt_label = graph
+                .nodes
+                .iter()
                 .find(|n| n.id == edge.target)
                 .map(|n| n.label.as_str())
                 .unwrap_or(&edge.target);
-            
+
             questions.push(SuggestedQuestion {
                 question_type: "ambiguous_edge".to_string(),
-                question: format!("What is the exact relationship between `{}` and `{}`?", src_label, tgt_label),
-                why: format!("Edge tagged AMBIGUOUS (relation: {}) - confidence is low.", edge.relation),
+                question: format!(
+                    "What is the exact relationship between `{}` and `{}`?",
+                    src_label, tgt_label
+                ),
+                why: format!(
+                    "Edge tagged AMBIGUOUS (relation: {}) - confidence is low.",
+                    edge.relation
+                ),
             });
         }
     }
-    
+
     // 2. Bridge nodes
     let betweenness = calculate_betweenness(graph);
     let community_sizes = count_community_sizes(graph);
-    
+
     for (node_id, score) in betweenness.iter().take(10) {
         let score_val = *score;
-        if score_val == 0.0 { continue; }
-        if is_file_node(graph, node_id) { continue; }
-        
+        if score_val == 0.0 {
+            continue;
+        }
+        if is_file_node(graph, node_id) {
+            continue;
+        }
+
         let node = match graph.nodes.iter().find(|n| n.id == *node_id) {
             Some(n) => n,
             None => continue,
         };
         let label = &node.label;
         let cid = node.community;
-        
+
         // Count neighbors in different communities
         let mut neighbor_comms = HashSet::new();
         for edge in &graph.links {
@@ -710,54 +777,90 @@ pub fn suggest_questions(graph: &GraphData, top_n: usize) -> Vec<SuggestedQuesti
                 }
             }
         }
-        
+
         if let Some(main_comm) = cid {
             neighbor_comms.remove(&main_comm);
         }
-        
+
         if !neighbor_comms.is_empty() && score_val > 0.0 {
             let comm_labels = generate_community_labels(graph, &community_sizes);
-            let main_label = cid.map(|c| comm_labels.get(&c).cloned().unwrap_or_else(|| format!("Community {}", c)))
+            let main_label = cid
+                .map(|c| {
+                    comm_labels
+                        .get(&c)
+                        .cloned()
+                        .unwrap_or_else(|| format!("Community {}", c))
+                })
                 .unwrap_or_else(|| "unknown".to_string());
-            let other_labels: Vec<_> = neighbor_comms.iter()
-                .map(|c| comm_labels.get(c).cloned().unwrap_or_else(|| format!("Community {}", c)))
+            let other_labels: Vec<_> = neighbor_comms
+                .iter()
+                .map(|c| {
+                    comm_labels
+                        .get(c)
+                        .cloned()
+                        .unwrap_or_else(|| format!("Community {}", c))
+                })
                 .collect();
-            
+
             questions.push(SuggestedQuestion {
                 question_type: "bridge_node".to_string(),
-                question: format!("Why does `{}` connect `{}` to {}?", label, main_label,
-                    other_labels.iter().map(|l| format!("`{}`", l)).collect::<Vec<_>>().join(", ")),
-                why: format!("High betweenness centrality ({}) - this node is a cross-community bridge.", score_val),
+                question: format!(
+                    "Why does `{}` connect `{}` to {}?",
+                    label,
+                    main_label,
+                    other_labels
+                        .iter()
+                        .map(|l| format!("`{}`", l))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                why: format!(
+                    "High betweenness centrality ({}) - this node is a cross-community bridge.",
+                    score_val
+                ),
             });
         }
     }
-    
+
     // 3. God nodes with many INFERRED edges
     let god_nodes = find_god_nodes(graph, 5);
     for god in god_nodes {
-        let inferred_count = graph.links.iter()
+        let inferred_count = graph
+            .links
+            .iter()
             .filter(|e| {
-                (e.source == god.node.id || e.target == god.node.id) 
-                && e.confidence == Confidence::Inferred
+                (e.source == god.node.id || e.target == god.node.id)
+                    && e.confidence == Confidence::Inferred
             })
             .count();
-        
+
         if inferred_count >= 2 {
-            let inferred_edges: Vec<_> = graph.links.iter()
+            let inferred_edges: Vec<_> = graph
+                .links
+                .iter()
                 .filter(|e| {
-                    (e.source == god.node.id || e.target == god.node.id) 
-                    && e.confidence == Confidence::Inferred
+                    (e.source == god.node.id || e.target == god.node.id)
+                        && e.confidence == Confidence::Inferred
                 })
                 .take(2)
                 .collect();
-            
-            let others: Vec<_> = inferred_edges.iter()
+
+            let others: Vec<_> = inferred_edges
+                .iter()
                 .filter_map(|e| {
-                    let other_id = if e.source == god.node.id { &e.target } else { &e.source };
-                    graph.nodes.iter().find(|n| n.id == *other_id).map(|n| n.label.as_str())
+                    let other_id = if e.source == god.node.id {
+                        &e.target
+                    } else {
+                        &e.source
+                    };
+                    graph
+                        .nodes
+                        .iter()
+                        .find(|n| n.id == *other_id)
+                        .map(|n| n.label.as_str())
                 })
                 .collect();
-            
+
             if !others.is_empty() {
                 questions.push(SuggestedQuestion {
                     question_type: "verify_inferred".to_string(),
@@ -768,46 +871,68 @@ pub fn suggest_questions(graph: &GraphData, top_n: usize) -> Vec<SuggestedQuesti
             }
         }
     }
-    
+
     // 4. Isolated nodes
-    let isolated: Vec<_> = graph.nodes.iter()
+    let isolated: Vec<_> = graph
+        .nodes
+        .iter()
         .filter(|n| {
-            let degree = graph.links.iter()
+            let degree = graph
+                .links
+                .iter()
                 .filter(|e| e.source == n.id || e.target == n.id)
                 .count();
             !is_file_node(graph, &n.id) && degree <= 1
         })
         .take(3)
         .collect();
-    
+
     if !isolated.is_empty() {
         let labels: Vec<_> = isolated.iter().map(|n| n.label.as_str()).collect();
         questions.push(SuggestedQuestion {
             question_type: "isolated_nodes".to_string(),
-            question: format!("What connects {} to the rest of the system?",
-                labels.iter().map(|l| format!("`{}`", l)).collect::<Vec<_>>().join(", ")),
-            why: format!("{} weakly-connected nodes found - possible documentation gaps or missing edges.", isolated.len()),
+            question: format!(
+                "What connects {} to the rest of the system?",
+                labels
+                    .iter()
+                    .map(|l| format!("`{}`", l))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            why: format!(
+                "{} weakly-connected nodes found - possible documentation gaps or missing edges.",
+                isolated.len()
+            ),
         });
     }
-    
+
     // 5. Low-cohesion communities
     let cohesion = calculate_cohesion_scores(graph);
     for (cid, &score) in &cohesion {
         let comm_size = *community_sizes.get(cid).unwrap_or(&0);
         if score < 0.15 && comm_size >= 5 {
             let labels = generate_community_labels(graph, &community_sizes);
-            let label = labels.get(cid).cloned().unwrap_or_else(|| format!("Community {}", cid));
-            
+            let label = labels
+                .get(cid)
+                .cloned()
+                .unwrap_or_else(|| format!("Community {}", cid));
+
             questions.push(SuggestedQuestion {
                 question_type: "low_cohesion".to_string(),
-                question: format!("Should `{}` be split into smaller, more focused modules?", label),
-                why: format!("Cohesion score {:.2} - nodes in this community are weakly interconnected.", score),
+                question: format!(
+                    "Should `{}` be split into smaller, more focused modules?",
+                    label
+                ),
+                why: format!(
+                    "Cohesion score {:.2} - nodes in this community are weakly interconnected.",
+                    score
+                ),
             });
         }
     }
-    
+
     questions.truncate(top_n);
-    
+
     if questions.is_empty() {
         questions.push(SuggestedQuestion {
             question_type: "no_signal".to_string(),
@@ -815,33 +940,33 @@ pub fn suggest_questions(graph: &GraphData, top_n: usize) -> Vec<SuggestedQuesti
             why: "Not enough signal to generate questions. This usually means the corpus has no AMBIGUOUS edges, no bridge nodes, no INFERRED relationships, and all communities are tightly cohesive.".to_string(),
         });
     }
-    
+
     questions
 }
 
 /// Calculate betweenness centrality (simplified)
 fn calculate_betweenness(graph: &GraphData) -> HashMap<String, f64> {
     let mut betweenness: HashMap<String, f64> = HashMap::new();
-    
+
     for node in &graph.nodes {
         betweenness.insert(node.id.clone(), 0.0);
     }
-    
+
     for source in &graph.nodes {
         let mut queue = vec![source.id.as_str()];
         let mut visited = HashSet::new();
         let mut paths: HashMap<&str, Vec<Vec<&str>>> = HashMap::new();
         let mut distance: HashMap<&str, usize> = HashMap::new();
-        
+
         paths.insert(source.id.as_str(), vec![vec![source.id.as_str()]]);
         distance.insert(source.id.as_str(), 0);
-        
+
         while let Some(current) = queue.pop() {
             if visited.contains(current) {
                 continue;
             }
             visited.insert(current);
-            
+
             for edge in &graph.links {
                 let neighbor = if edge.source == current {
                     edge.target.as_str()
@@ -850,15 +975,17 @@ fn calculate_betweenness(graph: &GraphData) -> HashMap<String, f64> {
                 } else {
                     continue;
                 };
-                
+
                 if !visited.contains(neighbor) {
                     let current_dist = *distance.get(current).unwrap_or(&usize::MAX);
                     let new_dist = current_dist + 1;
-                    
-                    if !distance.contains_key(neighbor) || new_dist < *distance.get(neighbor).unwrap() {
+
+                    if !distance.contains_key(neighbor)
+                        || new_dist < *distance.get(neighbor).unwrap()
+                    {
                         distance.insert(neighbor, new_dist);
                     }
-                    
+
                     if new_dist == current_dist + 1 {
                         // Collect new paths first to avoid borrow conflict
                         let mut new_paths_for_neighbor: Vec<Vec<&str>> = Vec::new();
@@ -878,7 +1005,7 @@ fn calculate_betweenness(graph: &GraphData) -> HashMap<String, f64> {
                 }
             }
         }
-        
+
         for (node, node_paths) in &paths {
             if **node == *source.id.as_str() {
                 continue;
@@ -887,7 +1014,7 @@ fn calculate_betweenness(graph: &GraphData) -> HashMap<String, f64> {
             *betweenness.entry((*node).to_string()).or_insert(0.0) += count;
         }
     }
-    
+
     let n = graph.nodes.len();
     if n > 2 {
         let factor = 2.0 / ((n - 1) * (n - 2)) as f64;
@@ -895,7 +1022,7 @@ fn calculate_betweenness(graph: &GraphData) -> HashMap<String, f64> {
             *score *= factor;
         }
     }
-    
+
     betweenness
 }
 
@@ -903,41 +1030,64 @@ fn calculate_betweenness(graph: &GraphData) -> HashMap<String, f64> {
 pub fn graph_diff(old_graph: &GraphData, new_graph: &GraphData) -> GraphDiff {
     let old_node_ids: HashSet<_> = old_graph.nodes.iter().map(|n| n.id.clone()).collect();
     let new_node_ids: HashSet<_> = new_graph.nodes.iter().map(|n| n.id.clone()).collect();
-    
+
     let added_ids: Vec<_> = new_node_ids.difference(&old_node_ids).cloned().collect();
     let removed_ids: Vec<_> = old_node_ids.difference(&new_node_ids).cloned().collect();
-    
-    let new_nodes_list: Vec<NodeChange> = added_ids.iter()
+
+    let new_nodes_list: Vec<NodeChange> = added_ids
+        .iter()
         .filter_map(|id| {
-            new_graph.nodes.iter()
+            new_graph
+                .nodes
+                .iter()
                 .find(|n| n.id == *id)
-                .map(|n| NodeChange { id: n.id.clone(), label: n.label.clone() })
+                .map(|n| NodeChange {
+                    id: n.id.clone(),
+                    label: n.label.clone(),
+                })
         })
         .collect();
-    
-    let removed_nodes_list: Vec<NodeChange> = removed_ids.iter()
+
+    let removed_nodes_list: Vec<NodeChange> = removed_ids
+        .iter()
         .filter_map(|id| {
-            old_graph.nodes.iter()
+            old_graph
+                .nodes
+                .iter()
                 .find(|n| n.id == *id)
-                .map(|n| NodeChange { id: n.id.clone(), label: n.label.clone() })
+                .map(|n| NodeChange {
+                    id: n.id.clone(),
+                    label: n.label.clone(),
+                })
         })
         .collect();
-    
+
     // Edge diff
-    let old_edge_keys: HashSet<_> = old_graph.links.iter()
+    let old_edge_keys: HashSet<_> = old_graph
+        .links
+        .iter()
         .map(|e| (e.source.as_str(), e.target.as_str(), e.relation.as_str()))
         .collect();
-    let new_edge_keys: HashSet<_> = new_graph.links.iter()
+    let new_edge_keys: HashSet<_> = new_graph
+        .links
+        .iter()
         .map(|e| (e.source.as_str(), e.target.as_str(), e.relation.as_str()))
         .collect();
-    
+
     let added_edge_keys: Vec<_> = new_edge_keys.difference(&old_edge_keys).collect();
     let removed_edge_keys: Vec<_> = old_edge_keys.difference(&new_edge_keys).collect();
-    
-    let new_edges_list: Vec<EdgeChange> = added_edge_keys.iter()
+
+    let new_edges_list: Vec<EdgeChange> = added_edge_keys
+        .iter()
         .filter_map(|(src, tgt, rel)| {
-            new_graph.links.iter()
-                .find(|e| e.source.as_str() == *src && e.target.as_str() == *tgt && e.relation.as_str() == *rel)
+            new_graph
+                .links
+                .iter()
+                .find(|e| {
+                    e.source.as_str() == *src
+                        && e.target.as_str() == *tgt
+                        && e.relation.as_str() == *rel
+                })
                 .map(|e| EdgeChange {
                     source: e.source.clone(),
                     target: e.target.clone(),
@@ -946,11 +1096,18 @@ pub fn graph_diff(old_graph: &GraphData, new_graph: &GraphData) -> GraphDiff {
                 })
         })
         .collect();
-    
-    let removed_edges_list: Vec<EdgeChange> = removed_edge_keys.iter()
+
+    let removed_edges_list: Vec<EdgeChange> = removed_edge_keys
+        .iter()
         .filter_map(|(src, tgt, rel)| {
-            old_graph.links.iter()
-                .find(|e| e.source.as_str() == *src && e.target.as_str() == *tgt && e.relation.as_str() == *rel)
+            old_graph
+                .links
+                .iter()
+                .find(|e| {
+                    e.source.as_str() == *src
+                        && e.target.as_str() == *tgt
+                        && e.relation.as_str() == *rel
+                })
                 .map(|e| EdgeChange {
                     source: e.source.clone(),
                     target: e.target.clone(),
@@ -959,27 +1116,51 @@ pub fn graph_diff(old_graph: &GraphData, new_graph: &GraphData) -> GraphDiff {
                 })
         })
         .collect();
-    
+
     let mut parts = Vec::new();
     if !new_nodes_list.is_empty() {
-        parts.push(format!("{} new node{}", new_nodes_list.len(), if new_nodes_list.len() != 1 { "s" } else { "" }));
+        parts.push(format!(
+            "{} new node{}",
+            new_nodes_list.len(),
+            if new_nodes_list.len() != 1 { "s" } else { "" }
+        ));
     }
     if !new_edges_list.is_empty() {
-        parts.push(format!("{} new edge{}", new_edges_list.len(), if new_edges_list.len() != 1 { "s" } else { "" }));
+        parts.push(format!(
+            "{} new edge{}",
+            new_edges_list.len(),
+            if new_edges_list.len() != 1 { "s" } else { "" }
+        ));
     }
     if !removed_nodes_list.is_empty() {
-        parts.push(format!("{} node{} removed", removed_nodes_list.len(), if removed_nodes_list.len() != 1 { "s" } else { "" }));
+        parts.push(format!(
+            "{} node{} removed",
+            removed_nodes_list.len(),
+            if removed_nodes_list.len() != 1 {
+                "s"
+            } else {
+                ""
+            }
+        ));
     }
     if !removed_edges_list.is_empty() {
-        parts.push(format!("{} edge{} removed", removed_edges_list.len(), if removed_edges_list.len() != 1 { "s" } else { "" }));
+        parts.push(format!(
+            "{} edge{} removed",
+            removed_edges_list.len(),
+            if removed_edges_list.len() != 1 {
+                "s"
+            } else {
+                ""
+            }
+        ));
     }
-    
+
     let summary = if parts.is_empty() {
         "no changes".to_string()
     } else {
         parts.join(", ")
     };
-    
+
     GraphDiff {
         new_nodes: new_nodes_list,
         removed_nodes: removed_nodes_list,
@@ -1003,9 +1184,24 @@ mod tests {
         ];
 
         let edges = vec![
-            Edge::new("a.py:A".into(), "a.py:B".into(), "calls".into(), Confidence::Extracted),
-            Edge::new("a.py:A".into(), "a.py:C".into(), "calls".into(), Confidence::Inferred),
-            Edge::new("a.py:B".into(), "b.py:D".into(), "imports".into(), Confidence::Extracted),
+            Edge::new(
+                "a.py:A".into(),
+                "a.py:B".into(),
+                "calls".into(),
+                Confidence::Extracted,
+            ),
+            Edge::new(
+                "a.py:A".into(),
+                "a.py:C".into(),
+                "calls".into(),
+                Confidence::Inferred,
+            ),
+            Edge::new(
+                "a.py:B".into(),
+                "b.py:D".into(),
+                "imports".into(),
+                Confidence::Extracted,
+            ),
         ];
 
         GraphData {
@@ -1032,31 +1228,41 @@ mod tests {
         assert_eq!(stats.inferred, 1);
         assert_eq!(stats.ambiguous, 0);
     }
-    
+
     #[test]
     fn test_suggest_questions() {
         let graph = create_test_graph();
         let questions = suggest_questions(&graph, 5);
         assert!(!questions.is_empty());
     }
-    
+
     #[test]
     fn test_graph_diff() {
         let old = create_test_graph();
-        
+
         let mut new_nodes = old.nodes.clone();
-        new_nodes.push(Node::new("c.py:E".into(), "E".into(), "c.py".into(), "L1".into()));
-        
+        new_nodes.push(Node::new(
+            "c.py:E".into(),
+            "E".into(),
+            "c.py".into(),
+            "L1".into(),
+        ));
+
         let mut new_edges = old.links.clone();
-        new_edges.push(Edge::new("a.py:A".into(), "c.py:E".into(), "calls".into(), Confidence::Inferred));
-        
+        new_edges.push(Edge::new(
+            "a.py:A".into(),
+            "c.py:E".into(),
+            "calls".into(),
+            Confidence::Inferred,
+        ));
+
         let new_graph = GraphData {
             nodes: new_nodes,
             links: new_edges,
             metadata: GraphMetadata::new(5, 4, 2),
             hyperedges: Vec::new(),
         };
-        
+
         let diff = graph_diff(&old, &new_graph);
         assert_eq!(diff.new_nodes.len(), 1);
         assert_eq!(diff.new_edges.len(), 1);

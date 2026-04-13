@@ -15,12 +15,12 @@
 //! - Creates "rationale_for" edges connecting rationale to code entities
 //! - This is Python-specific and requires docstring parsing
 
-use crate::lang::{get_ts_language, all_definition_kinds};
+use crate::lang::{all_definition_kinds, get_ts_language};
 use crate::types::{Confidence, Edge, ExtractionResult, Node};
 use std::collections::HashMap;
 use std::path::Path;
-use tree_sitter::{Node as TsNode, Parser};
 use std::sync::LazyLock;
+use tree_sitter::{Node as TsNode, Parser};
 
 /// All definition kinds loaded from lang.rs (dynamic per language config)
 static DEFINITION_KINDS: LazyLock<Vec<&'static str>> = LazyLock::new(all_definition_kinds);
@@ -170,7 +170,7 @@ fn extract_with_parser(
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    
+
     if ext == "py" {
         extract_python_rationale(&root, ctx, &mut result, source_bytes);
     }
@@ -207,13 +207,13 @@ const RATIONALE_PREFIXES: &[&str] = &[
 ];
 
 /// PASS 3: Extract Python docstrings and rationale comments
-/// 
+///
 /// This pass extracts:
 /// 1. Module-level docstrings
 /// 2. Class docstrings  
 /// 3. Function docstrings
 /// 4. Rationale comments (# NOTE:, # WHY:, etc.)
-/// 
+///
 /// Each rationale creates:
 /// - A "rationale" node with file_type = "rationale"
 /// - A "rationale_for" edge connecting it to the parent entity
@@ -225,28 +225,28 @@ fn extract_python_rationale(
 ) {
     let source_str = String::from_utf8_lossy(source);
     let lines: Vec<&str> = source_str.lines().collect();
-    
+
     // Process rationale comments line by line
     for (lineno, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
-        
+
         for prefix in RATIONALE_PREFIXES {
             if trimmed.starts_with(prefix) {
                 let rationale_text = trimmed.trim_start_matches(prefix).trim();
                 if rationale_text.len() > 5 {
                     // Create rationale node ID
                     let rationale_key = format!("{}_rationale_{}", ctx.file_stem, lineno + 1);
-                    
+
                     if !ctx.has_rationale(&rationale_key) {
                         ctx.add_rationale(rationale_key.clone());
-                        
+
                         // Truncate long rationale text
                         let truncated = if rationale_text.len() > 200 {
                             format!("{}...", &rationale_text[..197])
                         } else {
                             rationale_text.to_string()
                         };
-                        
+
                         // Add rationale node
                         let rationale_node = Node {
                             id: rationale_key.clone(),
@@ -258,7 +258,7 @@ fn extract_python_rationale(
                             node_type: Some("rationale".to_string()),
                             file_stem: Some(ctx.file_stem.clone()),
                         };
-                        
+
                         // Connect to file node (module-level rationale)
                         let file_node_id = ctx.file_stem.clone();
                         result.add_node(rationale_node);
@@ -274,7 +274,7 @@ fn extract_python_rationale(
             }
         }
     }
-    
+
     // Extract docstrings by walking the AST
     extract_docstrings(node, ctx, result, source);
 }
@@ -287,12 +287,13 @@ fn extract_docstrings(
     source: &[u8],
 ) {
     let kind = node.kind();
-    
+
     // Handle class definitions
     if kind == "class_definition" {
         // Check for class docstring
         let body = node.child_by_field_name("body");
-        let name = node.child_by_field_name("name")
+        let name = node
+            .child_by_field_name("name")
             .and_then(|n| extract_text(&n, source));
         if let (Some(name_str), Some(body_node)) = (name, body) {
             if let Some((docstring, line)) = extract_docstring_from_body(&body_node, source) {
@@ -300,10 +301,11 @@ fn extract_docstrings(
             }
         }
     }
-    // Handle function definitions  
+    // Handle function definitions
     else if kind == "function_definition" {
         let body = node.child_by_field_name("body");
-        let name = node.child_by_field_name("name")
+        let name = node
+            .child_by_field_name("name")
             .and_then(|n| extract_text(&n, source));
         if let (Some(name_str), Some(body_node)) = (name, body) {
             if let Some((docstring, line)) = extract_docstring_from_body(&body_node, source) {
@@ -311,7 +313,7 @@ fn extract_docstrings(
             }
         }
     }
-    
+
     // Recurse into children
     let child_count = node.child_count();
     for i in 0..child_count {
@@ -336,24 +338,27 @@ fn extract_docstring_from_body(body: &TsNode, source: &[u8]) -> Option<(String, 
                 if expr_child.kind() == "string" {
                     if let Ok(text) = expr_child.utf8_text(source) {
                         // Strip quotes
-                        let trimmed = text
-                            .trim_matches('"')
-                            .trim_matches('\'')
-                            .trim();
-                        
+                        let trimmed = text.trim_matches('"').trim_matches('\'').trim();
+
                         // Check for triple quotes
-                        let final_text = if trimmed.starts_with("\"\"\"") || trimmed.starts_with("'''") {
-                            let quote_len = 3;
-                            let end_quote_len = if trimmed.ends_with("\"\"\"") || trimmed.ends_with("'''") { 3 } else { 0 };
-                            if trimmed.len() > quote_len * 2 + end_quote_len {
-                                trimmed[quote_len..trimmed.len()-end_quote_len].to_string()
+                        let final_text =
+                            if trimmed.starts_with("\"\"\"") || trimmed.starts_with("'''") {
+                                let quote_len = 3;
+                                let end_quote_len =
+                                    if trimmed.ends_with("\"\"\"") || trimmed.ends_with("'''") {
+                                        3
+                                    } else {
+                                        0
+                                    };
+                                if trimmed.len() > quote_len * 2 + end_quote_len {
+                                    trimmed[quote_len..trimmed.len() - end_quote_len].to_string()
+                                } else {
+                                    trimmed.to_string()
+                                }
                             } else {
                                 trimmed.to_string()
-                            }
-                        } else {
-                            trimmed.to_string()
-                        };
-                        
+                            };
+
                         // Only consider meaningful docstrings (>20 chars)
                         if final_text.len() > 20 {
                             let line = expr_child.start_position().row + 1;
@@ -384,17 +389,17 @@ fn create_rationale_node(
 ) {
     // Create unique rationale ID
     let rationale_key = format!("{}_docstring_{}_{}", ctx.file_stem, entity_type, line);
-    
+
     if !ctx.has_rationale(&rationale_key) {
         ctx.add_rationale(rationale_key.clone());
-        
+
         // Truncate long docstrings
         let truncated = if docstring.len() > 200 {
             format!("{}...", &docstring[..197])
         } else {
             docstring.to_string()
         };
-        
+
         // Add rationale node
         let rationale_node = Node {
             id: rationale_key.clone(),
@@ -406,10 +411,10 @@ fn create_rationale_node(
             node_type: Some("docstring".to_string()),
             file_stem: Some(ctx.file_stem.clone()),
         };
-        
+
         // Connect to the entity (file_stem:name for classes/functions)
         let target_id = format!("{}:{}", ctx.file_stem, entity_name);
-        
+
         result.add_node(rationale_node);
         result.add_edge(Edge::new(
             rationale_key,
@@ -486,7 +491,7 @@ fn extract_text(node: &TsNode, source: &[u8]) -> Option<String> {
 }
 
 /// PASS 1: Collect all nodes (definitions)
-/// 
+///
 /// Walks the AST and collects:
 /// - function_definition → function node
 /// - class_definition → class node
@@ -494,7 +499,7 @@ fn extract_text(node: &TsNode, source: &[u8]) -> Option<String> {
 /// - module → module node
 /// - struct_declaration → struct node
 /// - enum_declaration → enum node
-/// 
+///
 /// Also creates edges for imports during this pass.
 fn walk_tree_pass1(
     node: &TsNode,
@@ -808,7 +813,7 @@ fn extract_go_import(text: &str) -> &str {
 }
 
 /// PASS 2: Build edges (call graph)
-/// 
+///
 /// Walks the AST to find:
 /// - call_expression → creates "calls" edge
 /// - Confidence is EXTRACTED if callee is a known definition
@@ -940,9 +945,29 @@ fn get_definition_name(node: &TsNode, source: &[u8]) -> Option<String> {
             // Split by whitespace and find the first valid identifier
             // Skip common keywords like "pub", "fn", "struct", "class", "def", etc.
             let keywords = [
-                "pub", "fn", "func", "function", "def", "class", "struct", "enum",
-                "impl", "trait", "type", "interface", "module", "const", "static",
-                "async", "pub", "mut", "ref", "move", "unsafe", "extern", "crate",
+                "pub",
+                "fn",
+                "func",
+                "function",
+                "def",
+                "class",
+                "struct",
+                "enum",
+                "impl",
+                "trait",
+                "type",
+                "interface",
+                "module",
+                "const",
+                "static",
+                "async",
+                "pub",
+                "mut",
+                "ref",
+                "move",
+                "unsafe",
+                "extern",
+                "crate",
             ];
             for word in trimmed.split_whitespace() {
                 let word_clean: String = word
@@ -951,7 +976,11 @@ fn get_definition_name(node: &TsNode, source: &[u8]) -> Option<String> {
                     .collect();
                 if !word_clean.is_empty()
                     && !keywords.contains(&word_clean.as_str())
-                    && (word_clean.chars().next().map(|c| c.is_alphabetic()).unwrap_or(false))
+                    && (word_clean
+                        .chars()
+                        .next()
+                        .map(|c| c.is_alphabetic())
+                        .unwrap_or(false))
                 {
                     return Some(word_clean);
                 }

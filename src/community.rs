@@ -123,12 +123,12 @@ fn calculate_cohesion(
 }
 
 /// Split oversized communities recursively using Louvain
-/// 
+///
 /// For communities larger than max_size:
 /// 1. Extract the subgraph for that community
 /// 2. Re-run Louvain on the subgraph
 /// 3. Assign new sub-community IDs to nodes
-/// 
+///
 /// This is equivalent to Graphify's _split_community() using Leiden/Louvain.
 pub fn split_oversized(graph: &mut GraphData, max_size: usize) {
     // Group nodes by community
@@ -152,7 +152,7 @@ pub fn split_oversized(graph: &mut GraphData, max_size: usize) {
             .iter()
             .filter_map(|&i| graph.nodes.get(i).map(|n| n.id.clone()))
             .collect();
-        
+
         // Build node index mapping (old ID -> new index in subgraph)
         let node_to_subgraph: HashMap<&str, usize> = subgraph_node_ids
             .iter()
@@ -161,7 +161,8 @@ pub fn split_oversized(graph: &mut GraphData, max_size: usize) {
             .collect();
 
         // Extract edges within this community
-        let subgraph_node_ids_str: HashSet<&str> = subgraph_node_ids.iter().map(|s| s.as_str()).collect();
+        let subgraph_node_ids_str: HashSet<&str> =
+            subgraph_node_ids.iter().map(|s| s.as_str()).collect();
         let subgraph_edges: Vec<(usize, usize, f64)> = graph
             .links
             .iter()
@@ -208,20 +209,20 @@ pub fn split_oversized(graph: &mut GraphData, max_size: usize) {
                 Some(n) => n.id.clone(),
                 None => continue,
             };
-            
+
             // Find subgraph index
             let sub_idx = match node_to_subgraph.get(node_id.as_str()) {
                 Some(&idx) => idx,
                 None => continue,
             };
-            
+
             // Get old and new community
             let sub_comm = sub_assignments[sub_idx];
             let new_id = match sub_id_map.get(&sub_comm) {
                 Some(&id) => id,
                 None => continue,
             };
-            
+
             // Update the node (we do this separately to avoid nested borrows)
             if sub_comm > 0 || sub_communities.len() == 1 {
                 if let Some(node) = graph.nodes.get_mut(node_idx) {
@@ -309,7 +310,12 @@ mod tests {
         add_communities(&mut graph, &[0, 0, 0, 1, 1]);
 
         // Original communities: {A,B,C}=0, {D,E}=1 (5 total nodes, 2 communities)
-        let original_count = graph.nodes.iter().filter_map(|n| n.community).collect::<HashSet<_>>().len();
+        let original_count = graph
+            .nodes
+            .iter()
+            .filter_map(|n| n.community)
+            .collect::<HashSet<_>>()
+            .len();
         assert_eq!(original_count, 2);
 
         split_oversized(&mut graph, 2);

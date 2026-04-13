@@ -8,8 +8,10 @@ fn extract_from_source(source: &str) -> Vec<String> {
     let file_path = dir.path().join("order.go");
     std::fs::write(&file_path, source).unwrap();
     let content = std::fs::read_to_string(&file_path).unwrap();
-    extract_file(&file_path, &content).unwrap()
-        .nodes.iter()
+    extract_file(&file_path, &content)
+        .unwrap()
+        .nodes
+        .iter()
         .map(|n| n.label.clone())
         .collect()
 }
@@ -54,9 +56,24 @@ func (o *Order) AddItem(item string) {
 }
 "#;
     let nodes = extract_from_source(source);
-    assert!(nodes.contains(&"NewOrderService".to_string()), "Should find NewOrderService");
-    assert!(nodes.contains(&"CreateOrder".to_string()), "Should find CreateOrder");
-    assert!(nodes.contains(&"SendConfirmation".to_string()), "Should find SendConfirmation");
-    assert!(nodes.contains(&"NewOrder".to_string()), "Should find NewOrder");
-    assert!(nodes.contains(&"AddItem".to_string()), "Should find AddItem");
+    assert!(
+        nodes.contains(&"NewOrderService".to_string()),
+        "Should find NewOrderService"
+    );
+    assert!(
+        nodes.contains(&"CreateOrder".to_string()),
+        "Should find CreateOrder"
+    );
+    assert!(
+        nodes.contains(&"SendConfirmation".to_string()),
+        "Should find SendConfirmation"
+    );
+    assert!(
+        nodes.contains(&"NewOrder".to_string()),
+        "Should find NewOrder"
+    );
+    assert!(
+        nodes.contains(&"AddItem".to_string()),
+        "Should find AddItem"
+    );
 }

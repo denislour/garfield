@@ -38,7 +38,7 @@ pub struct NodeDetails {
     pub node_type: Option<String>,
     pub incoming_edges: Vec<EdgeInfo>,
     pub outgoing_edges: Vec<EdgeInfo>,
-    pub hyperedge: Option<HyperedgeInfo>,  // ✨ Module info
+    pub hyperedge: Option<HyperedgeInfo>, // ✨ Module info
 }
 
 /// Hyperedge info for node details
@@ -105,12 +105,12 @@ pub struct GodNodeInfo {
 }
 
 /// Score nodes by keyword match (matching Graphify scoring)
-/// 
+///
 /// Scoring rules:
 /// - Label match = 1.0 per match
 /// - Source file match = 0.5 per match
 /// - Combined score = label_score + source_score
-/// 
+///
 /// Returns sorted list of (score, node_id)
 pub fn score_nodes<'a>(graph: &'a GraphData, terms: &'a [String]) -> Vec<(f64, &'a str)> {
     let mut scored = Vec::new();
@@ -321,7 +321,9 @@ pub fn subgraph_to_text(
     for (node_id, _) in &node_degrees {
         if let Some(node) = graph.nodes.iter().find(|n| &n.id == node_id) {
             // Find hyperedge for this node
-            let hyperedge_label = graph.hyperedges.iter()
+            let hyperedge_label = graph
+                .hyperedges
+                .iter()
                 .find(|he| he.nodes.contains(&node.id))
                 .map(|he| format!(" [{}]", he.label))
                 .unwrap_or_default();
@@ -410,10 +412,16 @@ pub fn query(
     };
 
     let traversal = if use_dfs { "DFS" } else { "BFS" };
-    
+
     let start_labels: Vec<_> = start_nodes
         .iter()
-        .filter_map(|id| graph.nodes.iter().find(|n| &n.id == *id).map(|n| n.label.as_str()))
+        .filter_map(|id| {
+            graph
+                .nodes
+                .iter()
+                .find(|n| &n.id == *id)
+                .map(|n| n.label.as_str())
+        })
         .collect();
 
     let header = format!(
@@ -452,18 +460,25 @@ pub fn query_with_filters(
     if let Some(nt) = node_type {
         let nt_lower = nt.to_lowercase();
         scored.retain(|(_, id)| {
-            graph.nodes.iter()
+            graph
+                .nodes
+                .iter()
                 .find(|n| &n.id == *id)
-                .map(|n| n.node_type.as_ref()
-                    .map(|t| t.to_lowercase().contains(&nt_lower))
-                    .unwrap_or(false))
+                .map(|n| {
+                    n.node_type
+                        .as_ref()
+                        .map(|t| t.to_lowercase().contains(&nt_lower))
+                        .unwrap_or(false)
+                })
                 .unwrap_or(false)
         });
     }
 
     if let Some(comm) = community {
         scored.retain(|(_, id)| {
-            graph.nodes.iter()
+            graph
+                .nodes
+                .iter()
                 .find(|n| &n.id == *id)
                 .map(|n| n.community == Some(comm))
                 .unwrap_or(false)
@@ -473,7 +488,9 @@ pub fn query_with_filters(
     if let Some(src) = source {
         let src_lower = src.to_lowercase();
         scored.retain(|(_, id)| {
-            graph.nodes.iter()
+            graph
+                .nodes
+                .iter()
                 .find(|n| &n.id == *id)
                 .map(|n| n.source_file.to_lowercase().contains(&src_lower))
                 .unwrap_or(false)
@@ -483,11 +500,10 @@ pub fn query_with_filters(
     if let Some(he) = hyperedge {
         let he_lower = he.to_lowercase();
         scored.retain(|(_, id)| {
-            graph.hyperedges.iter()
-                .any(|hyper| {
-                    hyper.label.to_lowercase().contains(&he_lower)
-                        && hyper.nodes.contains(&id.to_string())
-                })
+            graph.hyperedges.iter().any(|hyper| {
+                hyper.label.to_lowercase().contains(&he_lower)
+                    && hyper.nodes.contains(&id.to_string())
+            })
         });
     }
 
@@ -505,10 +521,16 @@ pub fn query_with_filters(
     };
 
     let traversal = if use_dfs { "DFS" } else { "BFS" };
-    
+
     let start_labels: Vec<_> = start_nodes
         .iter()
-        .filter_map(|id| graph.nodes.iter().find(|n| &n.id == *id).map(|n| n.label.as_str()))
+        .filter_map(|id| {
+            graph
+                .nodes
+                .iter()
+                .find(|n| &n.id == *id)
+                .map(|n| n.label.as_str())
+        })
         .collect();
 
     let mut filters_str = String::new();
@@ -541,15 +563,20 @@ pub fn query_with_filters(
 /// Get detailed node information
 pub fn get_node(graph: &GraphData, identifier: &str) -> Option<NodeDetails> {
     // Find node by ID or label
-    let node = graph.nodes.iter().find(|n| {
-        n.id == identifier || n.label.to_lowercase() == identifier.to_lowercase()
-    })?;
+    let node = graph
+        .nodes
+        .iter()
+        .find(|n| n.id == identifier || n.label.to_lowercase() == identifier.to_lowercase())?;
 
     // Collect incoming edges
-    let incoming: Vec<_> = graph.links.iter()
+    let incoming: Vec<_> = graph
+        .links
+        .iter()
         .filter(|e| e.target == node.id)
         .map(|e| {
-            let src_label = graph.nodes.iter()
+            let src_label = graph
+                .nodes
+                .iter()
                 .find(|n| n.id == e.source)
                 .map(|n| n.label.clone())
                 .unwrap_or_else(|| e.source.clone());
@@ -565,10 +592,14 @@ pub fn get_node(graph: &GraphData, identifier: &str) -> Option<NodeDetails> {
         .collect();
 
     // Collect outgoing edges
-    let outgoing: Vec<_> = graph.links.iter()
+    let outgoing: Vec<_> = graph
+        .links
+        .iter()
         .filter(|e| e.source == node.id)
         .map(|e| {
-            let tgt_label = graph.nodes.iter()
+            let tgt_label = graph
+                .nodes
+                .iter()
                 .find(|n| n.id == e.target)
                 .map(|n| n.label.clone())
                 .unwrap_or_else(|| e.target.clone());
@@ -584,7 +615,9 @@ pub fn get_node(graph: &GraphData, identifier: &str) -> Option<NodeDetails> {
         .collect();
 
     // Find hyperedge containing this node
-    let hyperedge = graph.hyperedges.iter()
+    let hyperedge = graph
+        .hyperedges
+        .iter()
         .find(|he| he.nodes.contains(&node.id))
         .map(|he| HyperedgeInfo {
             id: he.id.clone(),
@@ -609,8 +642,12 @@ pub fn get_node(graph: &GraphData, identifier: &str) -> Option<NodeDetails> {
 
 /// Get hyperedge by ID
 pub fn get_hyperedge(graph: &GraphData, identifier: &str) -> Option<HyperedgeInfo> {
-    graph.hyperedges.iter()
-        .find(|he| he.id == identifier || he.label.to_lowercase().contains(&identifier.to_lowercase()))
+    graph
+        .hyperedges
+        .iter()
+        .find(|he| {
+            he.id == identifier || he.label.to_lowercase().contains(&identifier.to_lowercase())
+        })
         .map(|he| HyperedgeInfo {
             id: he.id.clone(),
             label: he.label.clone(),
@@ -621,23 +658,23 @@ pub fn get_hyperedge(graph: &GraphData, identifier: &str) -> Option<HyperedgeInf
 }
 
 /// Get neighbors of a node
-pub fn get_neighbors(
-    graph: &GraphData,
-    identifier: &str,
-    max_results: usize,
-) -> Vec<EdgeInfo> {
-    let node = match graph.nodes.iter().find(|n| {
-        n.id == identifier || n.label.to_lowercase() == identifier.to_lowercase()
-    }) {
+pub fn get_neighbors(graph: &GraphData, identifier: &str, max_results: usize) -> Vec<EdgeInfo> {
+    let node = match graph
+        .nodes
+        .iter()
+        .find(|n| n.id == identifier || n.label.to_lowercase() == identifier.to_lowercase())
+    {
         Some(n) => n,
         None => return Vec::new(),
     };
-    
+
     let mut neighbors = Vec::new();
-    
+
     for edge in &graph.links {
         if edge.source == node.id {
-            let tgt_label = graph.nodes.iter()
+            let tgt_label = graph
+                .nodes
+                .iter()
                 .find(|n| n.id == edge.target)
                 .map(|n| n.label.clone())
                 .unwrap_or_else(|| edge.target.clone());
@@ -650,7 +687,9 @@ pub fn get_neighbors(
                 confidence: format!("{:?}", edge.confidence),
             });
         } else if edge.target == node.id {
-            let src_label = graph.nodes.iter()
+            let src_label = graph
+                .nodes
+                .iter()
                 .find(|n| n.id == edge.source)
                 .map(|n| n.label.clone())
                 .unwrap_or_else(|| edge.source.clone());
@@ -664,25 +703,30 @@ pub fn get_neighbors(
             });
         }
     }
-    
+
     neighbors.truncate(max_results);
     neighbors
 }
 
 /// Get all nodes in a community
 pub fn get_community(graph: &GraphData, community_id: u32) -> Option<CommunityInfo> {
-    let nodes: Vec<_> = graph.nodes.iter()
+    let nodes: Vec<_> = graph
+        .nodes
+        .iter()
         .filter(|n| n.community == Some(community_id))
         .collect();
-    
+
     if nodes.is_empty() {
         return None;
     }
-    
+
     // Calculate degree for each node
-    let community_nodes: Vec<CommunityNode> = nodes.iter()
+    let community_nodes: Vec<CommunityNode> = nodes
+        .iter()
         .map(|n| {
-            let degree = graph.links.iter()
+            let degree = graph
+                .links
+                .iter()
                 .filter(|e| e.source == n.id || e.target == n.id)
                 .count();
             CommunityNode {
@@ -692,7 +736,7 @@ pub fn get_community(graph: &GraphData, community_id: u32) -> Option<CommunityIn
             }
         })
         .collect();
-    
+
     // Calculate cohesion
     let size = nodes.len();
     let mut actual_edges = 0usize;
@@ -700,20 +744,24 @@ pub fn get_community(graph: &GraphData, community_id: u32) -> Option<CommunityIn
         for j in (i + 1)..size {
             let nid_i = &nodes[i].id;
             let nid_j = &nodes[j].id;
-            if graph.links.iter().any(|e| 
-                (e.source == *nid_i && e.target == *nid_j) ||
-                (e.source == *nid_j && e.target == *nid_i)
-            ) {
+            if graph.links.iter().any(|e| {
+                (e.source == *nid_i && e.target == *nid_j)
+                    || (e.source == *nid_j && e.target == *nid_i)
+            }) {
                 actual_edges += 1;
             }
         }
     }
     let possible = (size * (size - 1)) as f64 / 2.0;
-    let cohesion = if possible > 0.0 { actual_edges as f64 / possible } else { 1.0 };
-    
+    let cohesion = if possible > 0.0 {
+        actual_edges as f64 / possible
+    } else {
+        1.0
+    };
+
     // Generate label
     let label = format!("Community {}", community_id);
-    
+
     Some(CommunityInfo {
         id: community_id,
         size,
@@ -727,12 +775,12 @@ pub fn get_community(graph: &GraphData, community_id: u32) -> Option<CommunityIn
 pub fn graph_stats(graph: &GraphData) -> GraphStats {
     let total_nodes = graph.nodes.len();
     let total_edges = graph.links.len();
-    
+
     // Confidence breakdown
     let mut extracted = 0usize;
     let mut inferred = 0usize;
     let mut ambiguous = 0usize;
-    
+
     for edge in &graph.links {
         match edge.confidence {
             Confidence::Extracted => extracted += 1,
@@ -740,25 +788,31 @@ pub fn graph_stats(graph: &GraphData) -> GraphStats {
             Confidence::Ambiguous => ambiguous += 1,
         }
     }
-    
+
     // Calculate average degree
     let mut degree_sum = 0usize;
     for node in &graph.nodes {
-        let degree = graph.links.iter()
+        let degree = graph
+            .links
+            .iter()
             .filter(|e| e.source == node.id || e.target == node.id)
             .count();
         degree_sum += degree;
     }
-    let avg_degree = if total_nodes > 0 { 
-        degree_sum as f64 / total_nodes as f64 
-    } else { 
-        0.0 
+    let avg_degree = if total_nodes > 0 {
+        degree_sum as f64 / total_nodes as f64
+    } else {
+        0.0
     };
-    
+
     // Find most connected nodes
-    let mut node_degrees: Vec<_> = graph.nodes.iter()
+    let mut node_degrees: Vec<_> = graph
+        .nodes
+        .iter()
         .map(|n| {
-            let degree = graph.links.iter()
+            let degree = graph
+                .links
+                .iter()
                 .filter(|e| e.source == n.id || e.target == n.id)
                 .count();
             GodNodeInfo {
@@ -771,7 +825,7 @@ pub fn graph_stats(graph: &GraphData) -> GraphStats {
         .collect();
     node_degrees.sort_by(|a, b| b.degree.cmp(&a.degree));
     let most_connected: Vec<_> = node_degrees.into_iter().take(10).collect();
-    
+
     GraphStats {
         total_nodes,
         total_edges,
@@ -789,30 +843,44 @@ pub fn graph_stats(graph: &GraphData) -> GraphStats {
 /// Format graph stats as readable text
 pub fn format_graph_stats(stats: &GraphStats) -> String {
     let mut lines = Vec::new();
-    
+
     lines.push("## Graph Statistics".to_string());
     lines.push(format!("  Total Nodes: {}", stats.total_nodes));
     lines.push(format!("  Total Edges: {}", stats.total_edges));
     lines.push(format!("  Communities: {}", stats.communities));
     lines.push(format!("  Avg Degree: {:.2}", stats.avg_degree));
-    
+
     lines.push("\n## Confidence Breakdown".to_string());
-    lines.push(format!("  EXTRACTED: {}", stats.confidence_breakdown.extracted));
-    lines.push(format!("  INFERRED: {}", stats.confidence_breakdown.inferred));
-    lines.push(format!("  AMBIGUOUS: {}", stats.confidence_breakdown.ambiguous));
-    
+    lines.push(format!(
+        "  EXTRACTED: {}",
+        stats.confidence_breakdown.extracted
+    ));
+    lines.push(format!(
+        "  INFERRED: {}",
+        stats.confidence_breakdown.inferred
+    ));
+    lines.push(format!(
+        "  AMBIGUOUS: {}",
+        stats.confidence_breakdown.ambiguous
+    ));
+
     if !stats.most_connected.is_empty() {
         lines.push("\n## Most Connected Nodes".to_string());
         for (i, node) in stats.most_connected.iter().enumerate().take(5) {
-            lines.push(format!("  {}. {} (degree: {})", i + 1, node.label, node.degree));
+            lines.push(format!(
+                "  {}. {} (degree: {})",
+                i + 1,
+                node.label,
+                node.degree
+            ));
         }
     }
-    
+
     lines.join("\n")
 }
 
 /// Get node body - reads directly from source files
-/// 
+///
 /// Parse node ID to extract file_stem and function name,
 /// then read the source file and extract the function body.
 pub fn get_node_body(node_id: &str) -> Option<String> {
@@ -821,19 +889,19 @@ pub fn get_node_body(node_id: &str) -> Option<String> {
     if parts.len() < 2 {
         return None;
     }
-    
+
     let file_stem = parts[0];
     let name = parts[1..].join(":"); // Handle "Class::method" format
-    
+
     // Find source file by file_stem
     let source_file = find_source_file(file_stem)?;
-    
+
     // Read source file
     let content = match std::fs::read_to_string(&source_file) {
         Ok(c) => c,
         Err(_) => return None,
     };
-    
+
     // Extract function/method body
     extract_function_body(&content, &name)
 }
@@ -841,36 +909,34 @@ pub fn get_node_body(node_id: &str) -> Option<String> {
 /// Find source file path by file_stem
 fn find_source_file(file_stem: &str) -> Option<std::path::PathBuf> {
     // Search in common locations
-    let search_dirs = [
-        "./src",
-        ".",
-        "src",
-    ];
-    
+    let search_dirs = ["./src", ".", "src"];
+
     let extensions = ["rs", "py", "ts", "js", "go", "java"];
-    
+
     for dir in &search_dirs {
         for ext in &extensions {
             let path = std::path::Path::new(dir).join(format!("{}.{}", file_stem, ext));
             if path.exists() {
                 return Some(path);
             }
-            
+
             // Try with raw/ prefix (for graphify style)
-            let raw_path = std::path::Path::new(dir).join("raw").join(format!("{}.{}", file_stem, ext));
+            let raw_path = std::path::Path::new(dir)
+                .join("raw")
+                .join(format!("{}.{}", file_stem, ext));
             if raw_path.exists() {
                 return Some(raw_path);
             }
         }
     }
-    
+
     None
 }
 
 /// Extract function body from source content
 fn extract_function_body(content: &str, fn_name: &str) -> Option<String> {
     let lines: Vec<&str> = content.lines().collect();
-    
+
     // Try to find function definition
     let search_patterns = [
         format!("fn {}", fn_name),
@@ -879,7 +945,7 @@ fn extract_function_body(content: &str, fn_name: &str) -> Option<String> {
         format!("func {}", fn_name),
         format!("func ({}", fn_name), // TypeScript/Go style
     ];
-    
+
     let mut start_line = None;
     for (i, line) in lines.iter().enumerate() {
         for pattern in &search_patterns {
@@ -892,14 +958,14 @@ fn extract_function_body(content: &str, fn_name: &str) -> Option<String> {
             break;
         }
     }
-    
+
     let start = start_line?;
-    
+
     // Find end of function (matching brace)
     let mut brace_count = 0;
     let mut in_function = false;
     let mut end_line = start;
-    
+
     for i in start..lines.len() {
         let line = lines[i];
         for c in line.chars() {
@@ -920,7 +986,7 @@ fn extract_function_body(content: &str, fn_name: &str) -> Option<String> {
         }
         end_line = i;
     }
-    
+
     // Extract and return function body
     let body: String = lines[start..=end_line.min(lines.len() - 1)]
         .iter()
@@ -928,7 +994,7 @@ fn extract_function_body(content: &str, fn_name: &str) -> Option<String> {
         .map(|(_i, l)| format!("{:4}| {}", "", l))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     Some(body)
 }
 
@@ -1004,23 +1070,23 @@ mod tests {
         let path = path.unwrap();
         assert!(path.len() <= 5);
     }
-    
+
     #[test]
     fn test_get_node() {
         let graph = create_test_graph();
         let details = get_node(&graph, "a.py:A");
-        
+
         assert!(details.is_some());
         let details = details.unwrap();
         assert_eq!(details.label, "A");
         assert_eq!(details.outgoing_edges.len(), 1);
     }
-    
+
     #[test]
     fn test_graph_stats() {
         let graph = create_test_graph();
         let stats = graph_stats(&graph);
-        
+
         assert_eq!(stats.total_nodes, 4);
         assert_eq!(stats.total_edges, 3);
         assert_eq!(stats.confidence_breakdown.extracted, 2);

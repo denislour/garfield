@@ -98,13 +98,19 @@ fn test_filter_code_files_basic() {
         detected_file("image.png", "png"),
         detected_file("main.rs", "rs"),
     ];
-    
+
     let code_files = filter_code_files(&files);
-    
+
     assert_eq!(code_files.len(), 2);
-    assert!(code_files.iter().any(|f| f.path.to_string_lossy().contains("test.py")));
-    assert!(code_files.iter().any(|f| f.path.to_string_lossy().contains("main.rs")));
-    assert!(!code_files.iter().any(|f| f.path.to_string_lossy().contains("readme.md")));
+    assert!(code_files
+        .iter()
+        .any(|f| f.path.to_string_lossy().contains("test.py")));
+    assert!(code_files
+        .iter()
+        .any(|f| f.path.to_string_lossy().contains("main.rs")));
+    assert!(!code_files
+        .iter()
+        .any(|f| f.path.to_string_lossy().contains("readme.md")));
 }
 
 #[test]
@@ -113,7 +119,7 @@ fn test_filter_code_files_empty() {
         detected_file("image.png", "png"),
         detected_file("doc.pdf", "pdf"),
     ];
-    
+
     let code_files = filter_code_files(&files);
     assert!(code_files.is_empty());
 }
@@ -125,9 +131,9 @@ fn test_get_stats() {
         detected_file("main.rs", "rs"),
         detected_file("readme.md", "md"),
     ];
-    
+
     let stats = get_stats(&files);
-    
+
     assert_eq!(stats.total, 3);
     assert_eq!(stats.code, 2);
     assert_eq!(stats.markdown, 1);
@@ -140,11 +146,13 @@ fn test_detect_real_directory() {
         println!("SKIP: graphify directory not found");
         return;
     }
-    
+
     let result = garfield::detect::detect(test_dir).unwrap();
     assert!(!result.files.is_empty());
-    
-    let code_count = result.files.iter()
+
+    let code_count = result
+        .files
+        .iter()
         .filter(|f| f.file_type == garfield::FileType::Code)
         .count();
     assert!(code_count > 0, "Should detect code files");

@@ -232,7 +232,10 @@ fn detect_config_patterns(graph: &GraphData) -> Vec<HyperedgeCandidate> {
                     nodes: node_ids,
                     relation: "config_group".to_string(),
                     confidence: Confidence::Inferred,
-                    source_file: nodes.first().map(|n| n.source_file.clone()).unwrap_or_default(),
+                    source_file: nodes
+                        .first()
+                        .map(|n| n.source_file.clone())
+                        .unwrap_or_default(),
                     score,
                 });
             }
@@ -247,30 +250,30 @@ fn detect_config_patterns(graph: &GraphData) -> Vec<HyperedgeCandidate> {
 /// Example: src/auth/login.rs + src/auth/token.rs → "auth" module
 fn detect_directory_groups(graph: &GraphData) -> Vec<HyperedgeCandidate> {
     use std::path::Path;
-    
+
     let mut by_dir: HashMap<String, Vec<&Node>> = HashMap::new();
-    
+
     for node in &graph.nodes {
         let path = Path::new(&node.source_file);
-        
+
         // Get parent directory (skip 1 level to get meaningful prefix)
         let dir = path
             .parent()
             .and_then(|p| p.components().last())
             .map(|c| c.as_os_str().to_string_lossy().to_string())
             .unwrap_or_else(|| "root".to_string());
-        
+
         // Skip if root or hidden directory
         if dir == "root" || dir.starts_with('.') || dir.starts_with('/') {
             continue;
         }
-        
+
         by_dir.entry(dir.clone()).or_default().push(node);
     }
-    
+
     by_dir
         .into_iter()
-        .filter(|(_, nodes)| nodes.len() >= MIN_NODES * 2)  // Need 6+ nodes for directory grouping
+        .filter(|(_, nodes)| nodes.len() >= MIN_NODES * 2) // Need 6+ nodes for directory grouping
         .filter(|(_, nodes)| {
             // Check all nodes are in the same directory
             let first_dir = Path::new(&nodes[0].source_file)
@@ -279,20 +282,24 @@ fn detect_directory_groups(graph: &GraphData) -> Vec<HyperedgeCandidate> {
             nodes.iter().all(|n| {
                 Path::new(&n.source_file)
                     .parent()
-                    .map(|p| p.to_string_lossy().to_string()) == first_dir
+                    .map(|p| p.to_string_lossy().to_string())
+                    == first_dir
             })
         })
         .map(|(dir, nodes)| {
             let node_ids: Vec<String> = nodes.iter().map(|n| n.id.clone()).collect();
             let score = calculate_cohesion(&node_ids, graph);
-            
+
             HyperedgeCandidate {
                 id: format!("dir_{}", dir.to_lowercase()),
                 label: format!("{} directory", dir),
                 nodes: node_ids,
                 relation: "directory_module".to_string(),
                 confidence: Confidence::Inferred,
-                source_file: nodes.first().map(|n| n.source_file.clone()).unwrap_or_default(),
+                source_file: nodes
+                    .first()
+                    .map(|n| n.source_file.clone())
+                    .unwrap_or_default(),
                 score,
             }
         })
@@ -337,8 +344,7 @@ fn calculate_chain_cohesion(chain: &[String], graph: &GraphData) -> f64 {
 
         // Check if edge exists (either direction)
         let has_edge = graph.links.iter().any(|e| {
-            (e.source == *src && e.target == *tgt)
-                || (e.source == *tgt && e.target == *src)
+            (e.source == *src && e.target == *tgt) || (e.source == *tgt && e.target == *src)
         });
 
         if has_edge {
@@ -357,7 +363,11 @@ fn calculate_chain_cohesion(chain: &[String], graph: &GraphData) -> f64 {
     let same_file_bonus = if chain.len() > 1 {
         let first_node = graph.nodes.iter().find(|n| n.id == chain[0]);
         let last_node = graph.nodes.iter().find(|n| n.id == chain[chain.len() - 1]);
-        if first_node.zip(last_node).map(|(f, l)| f.source_file == l.source_file).unwrap_or(false) {
+        if first_node
+            .zip(last_node)
+            .map(|(f, l)| f.source_file == l.source_file)
+            .unwrap_or(false)
+        {
             0.1
         } else {
             0.0
@@ -392,9 +402,7 @@ fn process_candidates(mut candidates: Vec<HyperedgeCandidate>) -> Vec<Hyperedge>
 
     // Filter by criteria
     candidates.retain(|c| {
-        c.score >= MIN_SCORE
-            && c.nodes.len() >= MIN_NODES
-            && c.nodes.len() <= MAX_NODES
+        c.score >= MIN_SCORE && c.nodes.len() >= MIN_NODES && c.nodes.len() <= MAX_NODES
     });
 
     // Sort by score (highest first)
@@ -600,9 +608,24 @@ mod tests {
     #[test]
     fn test_config_pattern_detection() {
         let nodes = vec![
-            Node::new("a.yaml:svc1".to_string(), "svc1".to_string(), "a.yaml".to_string(), "L1".to_string()),
-            Node::new("a.yaml:svc2".to_string(), "svc2".to_string(), "a.yaml".to_string(), "L10".to_string()),
-            Node::new("a.yaml:svc3".to_string(), "svc3".to_string(), "a.yaml".to_string(), "L20".to_string()),
+            Node::new(
+                "a.yaml:svc1".to_string(),
+                "svc1".to_string(),
+                "a.yaml".to_string(),
+                "L1".to_string(),
+            ),
+            Node::new(
+                "a.yaml:svc2".to_string(),
+                "svc2".to_string(),
+                "a.yaml".to_string(),
+                "L10".to_string(),
+            ),
+            Node::new(
+                "a.yaml:svc3".to_string(),
+                "svc3".to_string(),
+                "a.yaml".to_string(),
+                "L20".to_string(),
+            ),
         ];
 
         let graph = GraphData::new(nodes, vec![], 1);

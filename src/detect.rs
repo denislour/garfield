@@ -77,46 +77,26 @@ const SENSITIVE_PATTERNS: &[&str] = &[
 /// Code extensions
 const CODE_EXTENSIONS: &[&str] = &[
     // Python
-    "py", "pyi", "pyw",
-    // JavaScript/TypeScript
-    "js", "mjs", "cjs", "jsx", "ts", "tsx",
-    // Go
-    "go",
-    // Rust
-    "rs",
-    // Java
-    "java",
-    // C/C++
-    "c", "h", "cpp", "hpp", "cc", "cxx", "hxx",
-    // Ruby
-    "rb",
-    // C#
-    "cs",
-    // Kotlin
-    "kt", "kts",
-    // Scala
-    "scala",
-    // PHP
-    "php",
-    // Swift
-    "swift",
-    // Lua
-    "lua",
-    // Zig
-    "zig",
-    // PowerShell
-    "ps1", "psm1",
-    // Elixir
-    "ex", "exs",
-    // Objective-C
-    "m", "mm",
-    // Julia
-    "jl",
-    // TOML
-    "toml",
-    // YAML
-    "yaml", "yml",
-    // JSON
+    "py", "pyi", "pyw", // JavaScript/TypeScript
+    "js", "mjs", "cjs", "jsx", "ts", "tsx", // Go
+    "go", // Rust
+    "rs", // Java
+    "java", // C/C++
+    "c", "h", "cpp", "hpp", "cc", "cxx", "hxx", // Ruby
+    "rb", // C#
+    "cs", // Kotlin
+    "kt", "kts", // Scala
+    "scala", // PHP
+    "php", // Swift
+    "swift", // Lua
+    "lua", // Zig
+    "zig", // PowerShell
+    "ps1", "psm1", // Elixir
+    "ex", "exs", // Objective-C
+    "m", "mm", // Julia
+    "jl", // TOML
+    "toml", // YAML
+    "yaml", "yml", // JSON
     "json",
 ];
 
@@ -161,7 +141,7 @@ fn load_graphifyignore(root: &Path) -> Vec<Regex> {
                 let file_path = ignore_file.to_string_lossy().to_string();
                 let line_count = content.lines().count();
                 let mut valid_count = 0;
-                
+
                 for line in content.lines() {
                     let line = line.trim();
                     if line.is_empty() || line.starts_with('#') {
@@ -173,10 +153,12 @@ fn load_graphifyignore(root: &Path) -> Vec<Regex> {
                         valid_count += 1;
                     }
                 }
-                
+
                 if valid_count > 0 {
-                    eprintln!("  Loaded {} patterns from {} ({} lines)", 
-                        valid_count, file_path, line_count);
+                    eprintln!(
+                        "  Loaded {} patterns from {} ({} lines)",
+                        valid_count, file_path, line_count
+                    );
                 }
             }
         }
@@ -282,7 +264,7 @@ pub fn detect(root: &Path) -> anyhow::Result<DetectResult> {
     let mut files = Vec::new();
     let mut warnings = Vec::new();
     let mut sensitive_skipped = Vec::new();
-    
+
     // Track counts
     let total_entries = AtomicUsize::new(0);
     let skipped_noise = AtomicUsize::new(0);
@@ -370,14 +352,14 @@ pub fn detect(root: &Path) -> anyhow::Result<DetectResult> {
     let noise_skipped = skipped_noise.load(Ordering::Relaxed);
     let ignored_skipped = skipped_ignored.load(Ordering::Relaxed);
     let hidden_skipped = skipped_hidden.load(Ordering::Relaxed);
-    
+
     // Log summary
     eprintln!("\n📁 Detection Summary:");
     eprintln!("  Total entries scanned: {}", total);
     eprintln!("  Hidden files skipped: {}", hidden_skipped);
     eprintln!("  Noise directories skipped: {}", noise_skipped);
     eprintln!("  .graphifyignore patterns skipped: {}", ignored_skipped);
-    
+
     if !sensitive_skipped.is_empty() {
         eprintln!("  🔒 Sensitive files skipped: {}", sensitive_skipped.len());
         for skipped in sensitive_skipped.iter().take(5) {
@@ -403,13 +385,11 @@ pub fn detect(root: &Path) -> anyhow::Result<DetectResult> {
         ));
     }
     if word_count < 50_000 && stats.code > 0 {
-        warnings.push(
-            "⚠️ Corpus may be too small for meaningful graph (<50K words)".to_string()
-        );
+        warnings.push("⚠️ Corpus may be too small for meaningful graph (<50K words)".to_string());
     }
     if word_count > 500_000 {
         warnings.push(
-            "⚠️ Large corpus (>500K words) - consider splitting into smaller projects".to_string()
+            "⚠️ Large corpus (>500K words) - consider splitting into smaller projects".to_string(),
         );
     }
 
@@ -579,7 +559,7 @@ mod tests {
     fn test_is_sensitive() {
         let env_path = Path::new("/project/.env");
         assert!(is_sensitive(env_path).is_some());
-        
+
         let normal_path = Path::new("/project/main.py");
         assert!(is_sensitive(normal_path).is_none());
     }

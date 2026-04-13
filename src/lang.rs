@@ -1,9 +1,9 @@
 //! Language configuration for Garfield
-//! 
+//!
 //! Centralized language definitions using tree-sitter-language-pack
 
-use tree_sitter_language_pack::Language;
 use std::collections::HashMap;
+use tree_sitter_language_pack::Language;
 
 /// Language configuration
 #[derive(Clone)]
@@ -19,9 +19,9 @@ pub struct LangConfig {
 
 #[derive(Clone, Copy, Debug)]
 pub enum CommentStyle {
-    Hash,      // # comment (Python, Ruby, Shell)
-    CStyle,    // // comment (C, C++, Java, Go, JS, TS)
-    Pascal,    // (* *) (Pascal, OCaml)
+    Hash,   // # comment (Python, Ruby, Shell)
+    CStyle, // // comment (C, C++, Java, Go, JS, TS)
+    Pascal, // (* *) (Pascal, OCaml)
 }
 
 impl LangConfig {
@@ -46,157 +46,264 @@ pub static LANG_CONFIGS: LazyLock<HashMap<&'static str, LangConfig>> = LazyLock:
     let mut m = HashMap::new();
 
     // Rust
-    m.insert("rust", LangConfig {
-        name: "rust",
-        extensions: vec!["rs"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["use_declaration"],
-        node_kinds: vec!["function_item", "function_declaration", "struct_item", "impl_item", "enum_item", "trait_item", "type_alias"],
-    });
+    m.insert(
+        "rust",
+        LangConfig {
+            name: "rust",
+            extensions: vec!["rs"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["use_declaration"],
+            node_kinds: vec![
+                "function_item",
+                "function_declaration",
+                "struct_item",
+                "impl_item",
+                "enum_item",
+                "trait_item",
+                "type_alias",
+            ],
+        },
+    );
 
     // Python
-    m.insert("python", LangConfig {
-        name: "python",
-        extensions: vec!["py", "pyi", "pyw"],
-        comment_style: CommentStyle::Hash,
-        import_kinds: vec!["import_statement", "import_from_statement"],
-        node_kinds: vec!["class_definition", "function_definition", "async_function_definition"],
-    });
+    m.insert(
+        "python",
+        LangConfig {
+            name: "python",
+            extensions: vec!["py", "pyi", "pyw"],
+            comment_style: CommentStyle::Hash,
+            import_kinds: vec!["import_statement", "import_from_statement"],
+            node_kinds: vec![
+                "class_definition",
+                "function_definition",
+                "async_function_definition",
+            ],
+        },
+    );
 
     // Ruby
-    m.insert("ruby", LangConfig {
-        name: "ruby",
-        extensions: vec!["rb"],
-        comment_style: CommentStyle::Hash,
-        import_kinds: vec!["require", "require_relative", "load"],
-        node_kinds: vec!["class", "module", "method", "singleton_method", "block"],
-    });
+    m.insert(
+        "ruby",
+        LangConfig {
+            name: "ruby",
+            extensions: vec!["rb"],
+            comment_style: CommentStyle::Hash,
+            import_kinds: vec!["require", "require_relative", "load"],
+            node_kinds: vec!["class", "module", "method", "singleton_method", "block"],
+        },
+    );
 
     // Java
-    m.insert("java", LangConfig {
-        name: "java",
-        extensions: vec!["java"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["import_declaration"],
-        node_kinds: vec!["class", "class_declaration", "interface_declaration", "method_declaration", "constructor_declaration"],
-    });
+    m.insert(
+        "java",
+        LangConfig {
+            name: "java",
+            extensions: vec!["java"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["import_declaration"],
+            node_kinds: vec![
+                "class",
+                "class_declaration",
+                "interface_declaration",
+                "method_declaration",
+                "constructor_declaration",
+            ],
+        },
+    );
 
     // Go
-    m.insert("go", LangConfig {
-        name: "go",
-        extensions: vec!["go"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["import_declaration"],
-        node_kinds: vec!["function_declaration", "method_declaration"],
-    });
+    m.insert(
+        "go",
+        LangConfig {
+            name: "go",
+            extensions: vec!["go"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["import_declaration"],
+            node_kinds: vec!["function_declaration", "method_declaration"],
+        },
+    );
 
     // JavaScript
-    m.insert("javascript", LangConfig {
-        name: "javascript",
-        extensions: vec!["js", "mjs", "cjs", "jsx"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["import_statement", "import_clause"],
-        node_kinds: vec!["class", "class_declaration", "function_declaration", "arrow_function"],
-    });
+    m.insert(
+        "javascript",
+        LangConfig {
+            name: "javascript",
+            extensions: vec!["js", "mjs", "cjs", "jsx"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["import_statement", "import_clause"],
+            node_kinds: vec![
+                "class",
+                "class_declaration",
+                "function_declaration",
+                "arrow_function",
+            ],
+        },
+    );
 
     // TypeScript
-    m.insert("typescript", LangConfig {
-        name: "typescript",
-        extensions: vec!["ts", "tsx"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["import_statement", "import_clause"],
-        node_kinds: vec!["class", "class_declaration", "function_declaration", "arrow_function", "method_definition"],
-    });
+    m.insert(
+        "typescript",
+        LangConfig {
+            name: "typescript",
+            extensions: vec!["ts", "tsx"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["import_statement", "import_clause"],
+            node_kinds: vec![
+                "class",
+                "class_declaration",
+                "function_declaration",
+                "arrow_function",
+                "method_definition",
+            ],
+        },
+    );
 
     // C
-    m.insert("c", LangConfig {
-        name: "c",
-        extensions: vec!["c", "h"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["preproc_include"],
-        node_kinds: vec!["function_definition"],
-    });
+    m.insert(
+        "c",
+        LangConfig {
+            name: "c",
+            extensions: vec!["c", "h"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["preproc_include"],
+            node_kinds: vec!["function_definition"],
+        },
+    );
 
     // C++
-    m.insert("cpp", LangConfig {
-        name: "cpp",
-        extensions: vec!["cpp", "cc", "cxx", "hpp", "hh", "hxx"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["using_declaration", "preproc_include"],
-        node_kinds: vec!["function_definition", "method_definition"],
-    });
+    m.insert(
+        "cpp",
+        LangConfig {
+            name: "cpp",
+            extensions: vec!["cpp", "cc", "cxx", "hpp", "hh", "hxx"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["using_declaration", "preproc_include"],
+            node_kinds: vec!["function_definition", "method_definition"],
+        },
+    );
 
     // Scala
-    m.insert("scala", LangConfig {
-        name: "scala",
-        extensions: vec!["scala"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["import_declaration"],
-        node_kinds: vec!["class_definition", "object_definition", "trait_definition", "function_definition"],
-    });
+    m.insert(
+        "scala",
+        LangConfig {
+            name: "scala",
+            extensions: vec!["scala"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["import_declaration"],
+            node_kinds: vec![
+                "class_definition",
+                "object_definition",
+                "trait_definition",
+                "function_definition",
+            ],
+        },
+    );
 
     // Lua
-    m.insert("lua", LangConfig {
-        name: "lua",
-        extensions: vec!["lua"],
-        comment_style: CommentStyle::Hash,
-        import_kinds: vec![],
-        node_kinds: vec!["function_declaration", "local_function_declaration"],
-    });
+    m.insert(
+        "lua",
+        LangConfig {
+            name: "lua",
+            extensions: vec!["lua"],
+            comment_style: CommentStyle::Hash,
+            import_kinds: vec![],
+            node_kinds: vec!["function_declaration", "local_function_declaration"],
+        },
+    );
 
     // PHP
-    m.insert("php", LangConfig {
-        name: "php",
-        extensions: vec!["php"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["use_declaration", "use_group_declaration"],
-        node_kinds: vec!["class_declaration", "trait_declaration", "interface_declaration", "method_declaration", "function_definition"],
-    });
+    m.insert(
+        "php",
+        LangConfig {
+            name: "php",
+            extensions: vec!["php"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["use_declaration", "use_group_declaration"],
+            node_kinds: vec![
+                "class_declaration",
+                "trait_declaration",
+                "interface_declaration",
+                "method_declaration",
+                "function_definition",
+            ],
+        },
+    );
 
     // Bash/Shell
-    m.insert("bash", LangConfig {
-        name: "bash",
-        extensions: vec!["sh", "bash", "zsh"],
-        comment_style: CommentStyle::Hash,
-        import_kinds: vec![],
-        node_kinds: vec!["function_definition"],
-    });
+    m.insert(
+        "bash",
+        LangConfig {
+            name: "bash",
+            extensions: vec!["sh", "bash", "zsh"],
+            comment_style: CommentStyle::Hash,
+            import_kinds: vec![],
+            node_kinds: vec!["function_definition"],
+        },
+    );
 
     // Zig
-    m.insert("zig", LangConfig {
-        name: "zig",
-        extensions: vec!["zig"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["usingnamespace", "const_declaration", "comptime"],
-        node_kinds: vec!["function_declaration", "method_definition", "struct", "enum", "union"],
-    });
+    m.insert(
+        "zig",
+        LangConfig {
+            name: "zig",
+            extensions: vec!["zig"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["usingnamespace", "const_declaration", "comptime"],
+            node_kinds: vec![
+                "function_declaration",
+                "method_definition",
+                "struct",
+                "enum",
+                "union",
+            ],
+        },
+    );
 
     // Elixir
-    m.insert("elixir", LangConfig {
-        name: "elixir",
-        extensions: vec!["ex", "exs"],
-        comment_style: CommentStyle::Hash,
-        import_kinds: vec!["import", "require", "alias", "use"],
-        node_kinds: vec!["module", "function", "clauses", "do_block"],
-    });
+    m.insert(
+        "elixir",
+        LangConfig {
+            name: "elixir",
+            extensions: vec!["ex", "exs"],
+            comment_style: CommentStyle::Hash,
+            import_kinds: vec!["import", "require", "alias", "use"],
+            node_kinds: vec!["module", "function", "clauses", "do_block"],
+        },
+    );
 
     // Kotlin
-    m.insert("kotlin", LangConfig {
-        name: "kotlin",
-        extensions: vec!["kt", "kts"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["import_directive"],
-        node_kinds: vec!["class", "function_declaration", "method_declaration", "object_declaration"],
-    });
+    m.insert(
+        "kotlin",
+        LangConfig {
+            name: "kotlin",
+            extensions: vec!["kt", "kts"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["import_directive"],
+            node_kinds: vec![
+                "class",
+                "function_declaration",
+                "method_declaration",
+                "object_declaration",
+            ],
+        },
+    );
 
     // Swift
-    m.insert("swift", LangConfig {
-        name: "swift",
-        extensions: vec!["swift"],
-        comment_style: CommentStyle::CStyle,
-        import_kinds: vec!["import_declaration"],
-        node_kinds: vec!["class_declaration", "struct_declaration", "function_declaration", "method_declaration"],
-    });
+    m.insert(
+        "swift",
+        LangConfig {
+            name: "swift",
+            extensions: vec!["swift"],
+            comment_style: CommentStyle::CStyle,
+            import_kinds: vec!["import_declaration"],
+            node_kinds: vec![
+                "class_declaration",
+                "struct_declaration",
+                "function_declaration",
+                "method_declaration",
+            ],
+        },
+    );
 
     m
 });
@@ -206,7 +313,7 @@ use std::sync::LazyLock;
 /// Get tree-sitter Language from language name
 pub fn get_ts_language(name: &str) -> Option<Language> {
     use tree_sitter_language_pack::get_language;
-    
+
     // Map common names
     let mapped = match name {
         "ts" | "tsx" => "typescript",
@@ -216,7 +323,7 @@ pub fn get_ts_language(name: &str) -> Option<Language> {
         "rb" => "ruby",
         other => other,
     };
-    
+
     get_language(mapped).ok()
 }
 
