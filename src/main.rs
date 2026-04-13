@@ -195,56 +195,12 @@ fn main() {
         }
 
         Cli::Explain { name, graph } => {
-            println!("Explaining: {}\n", name);
-
-            match garfield::from_json(std::path::Path::new(&graph)) {
-                Ok(g) => {
-                    // Find node
-                    let node = g.nodes.iter().find(|n| {
-                        n.label.to_lowercase().contains(&name.to_lowercase())
-                            || n.id.to_lowercase().contains(&name.to_lowercase())
-                    });
-
-                    if let Some(node) = node {
-                        println!("NODE: {}", node.label);
-                        println!("  ID: {}", node.id);
-                        println!("  File: {}", node.source_file);
-                        println!("  Location: {}", node.source_location);
-                        if let Some(c) = node.community {
-                            println!("  Community: {}", c);
-                        }
-
-                        // Find connections
-                        let connections: Vec<_> = g
-                            .links
-                            .iter()
-                            .filter(|e| e.source == node.id || e.target == node.id)
-                            .collect();
-
-                        if !connections.is_empty() {
-                            println!("\n  Connections ({}):", connections.len());
-                            for conn in connections.iter().take(10) {
-                                let other = if conn.source == node.id {
-                                    &conn.target
-                                } else {
-                                    &conn.source
-                                };
-                                let other_label = g
-                                    .nodes
-                                    .iter()
-                                    .find(|n| &n.id == other)
-                                    .map(|n| n.label.as_str())
-                                    .unwrap_or(other);
-
-                                println!("    - {} ({})", other_label, conn.relation);
-                            }
-                        }
-                    } else {
-                        println!("Node not found: {}", name);
-                    }
+            match garfield::run_explain(&graph, &name) {
+                Ok(result) => {
+                    println!("{}", result);
                 }
                 Err(e) => {
-                    eprintln!("Error loading graph: {}", e);
+                    eprintln!("Error: {}", e);
                     std::process::exit(1);
                 }
             }
