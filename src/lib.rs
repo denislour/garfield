@@ -226,30 +226,30 @@ pub fn run_explain(graph_path: &str, identifier: &str) -> anyhow::Result<String>
     if let Some(details) = details {
         let mut output = String::new();
 
-        output.push_str("═══ NODE ═══\n");
+        output.push_str("=== NODE ===\n");
         output.push_str(&format!("ID: {}\n", details.id));
         output.push_str(&format!("Label: {}\n", details.label));
         output.push_str(&format!("File: {}\n", details.source_file));
         output.push_str(&format!("Location: {}\n", details.source_location));
 
         if let Some(he) = details.hyperedge {
-            output.push_str("\n═══ MODULE (Hyperedge) ═══\n");
+            output.push_str("\n=== MODULE (Hyperedge) ===\n");
             output.push_str(&format!("Module: {}\n", he.label));
             output.push_str(&format!("Members: {} functions\n", he.member_count));
             output.push_str(&format!("Confidence: {:.2}\n", he.confidence_score));
         }
 
         if !details.outgoing_edges.is_empty() {
-            output.push_str("\n═══ CALLS ═══\n");
+            output.push_str("\n=== CALLS ===\n");
             for edge in details.outgoing_edges.iter().take(5) {
-                output.push_str(&format!("  → {} ({})\n", edge.target_label, edge.relation));
+                output.push_str(&format!("  -> {} ({})\n", edge.target_label, edge.relation));
             }
         }
 
         if !details.incoming_edges.is_empty() {
-            output.push_str("\n═══ CALLED BY ═══\n");
+            output.push_str("\n=== CALLED BY ===\n");
             for edge in details.incoming_edges.iter().take(5) {
-                output.push_str(&format!("  ← {} ({})\n", edge.source_label, edge.relation));
+                output.push_str(&format!("  <- {} ({})\n", edge.source_label, edge.relation));
             }
         }
 

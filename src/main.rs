@@ -140,7 +140,7 @@ fn main() {
 
             match garfield::run_build(&path, &output, update) {
                 Ok(summary) => {
-                    println!("\n✅ Build complete!");
+                    println!("\n[OK] Build complete!");
                     println!("  Nodes: {}", summary.total_nodes);
                     println!("  Edges: {}", summary.total_edges);
                     println!("  Communities: {}", summary.communities);
@@ -150,7 +150,7 @@ fn main() {
                     }
                 }
                 Err(e) => {
-                    eprintln!("\n❌ Error: {}", e);
+                    eprintln!("\n[ERROR] {}", e);
                     std::process::exit(1);
                 }
             }
@@ -211,7 +211,7 @@ fn main() {
             graph,
         } => {
             println!(
-                "Finding path: {} → {} (max {} hops)\n",
+                "Finding path: {} -> {} (max {} hops)\n",
                 source, target, max_hops
             );
 
@@ -220,7 +220,7 @@ fn main() {
                     println!("Path found ({} hops):", path.len() - 1);
                     for (i, node) in path.iter().enumerate() {
                         if i < path.len() - 1 {
-                            println!("  {} →", node);
+                            println!("  {} ->", node);
                         } else {
                             println!("  {}", node);
                         }
@@ -255,7 +255,7 @@ fn main() {
                     println!("{}", body);
                 }
                 None => {
-                    eprintln!("❌ Could not find body for: {}", node_id);
+                    eprintln!("[ERROR] Could not find body for: {}", node_id);
                     eprintln!(
                         "  Make sure the node ID is correct (format: file_stem:function_name)"
                     );
@@ -306,7 +306,7 @@ fn install_agent(name: &str, force: bool) {
         .join(name);
 
     if !agent_dir.exists() {
-        eprintln!("❌ Unknown agent: {}", name);
+        eprintln!("[ERROR] Unknown agent: {}", name);
         eprintln!("Available agents:");
         eprintln!("  pi      - PI agent");
         eprintln!("  claude  - Claude Code");
@@ -319,7 +319,7 @@ fn install_agent(name: &str, force: bool) {
         "claude" => install_claude_agent(&cwd, garfield_binary, &graph_json_absolute, force),
         "cursor" => install_cursor_agent(&cwd, garfield_binary, force),
         _ => {
-            eprintln!("❌ Unknown agent: {}", name);
+            eprintln!("[ERROR] Unknown agent: {}", name);
             std::process::exit(1);
         }
     }
@@ -339,7 +339,7 @@ fn uninstall_agent(name: &str) {
             // Remove extension
             if ext_dir.exists() {
                 std::fs::remove_dir_all(&ext_dir).ok();
-                println!("✅ PI Extension removed: {}", ext_dir.display());
+                println!("[OK] PI Extension removed: {}", ext_dir.display());
             } else {
                 println!("  PI Extension not found");
             }
@@ -347,12 +347,12 @@ fn uninstall_agent(name: &str) {
             // Remove skill
             if skill_dir.exists() {
                 std::fs::remove_dir_all(&skill_dir).ok();
-                println!("✅ PI Skill removed: {}", skill_dir.display());
+                println!("[OK] PI Skill removed: {}", skill_dir.display());
             } else {
                 println!("  PI Skill not found");
             }
 
-            println!("\n✨ PI agent uninstallation complete!");
+            println!("\n[DONE] PI agent uninstallation complete!");
         }
         "claude" => {
             let cwd = std::env::current_dir().unwrap_or_default();
@@ -365,7 +365,7 @@ fn uninstall_agent(name: &str) {
                 if content.contains("## garfield") || content.contains("## Garfield") {
                     let cleaned = remove_garfield_section(&content);
                     std::fs::write(&agents_md, cleaned).ok();
-                    println!("✅ AGENTS.md section removed");
+                    println!("[OK] AGENTS.md section removed");
                 } else {
                     println!("  AGENTS.md section not found");
                 }
@@ -374,10 +374,10 @@ fn uninstall_agent(name: &str) {
             // Remove MCP config
             if mcp_config.exists() {
                 std::fs::remove_file(&mcp_config).ok();
-                println!("✅ Claude Desktop config removed");
+                println!("[OK] Claude Desktop config removed");
             }
 
-            println!("\n✨ Claude agent uninstallation complete!");
+            println!("\n[DONE] Claude agent uninstallation complete!");
         }
         "cursor" => {
             let cwd = std::env::current_dir().unwrap_or_default();
@@ -389,16 +389,16 @@ fn uninstall_agent(name: &str) {
                 if content.contains("## garfield") || content.contains("## Garfield") {
                     let cleaned = remove_garfield_section(&content);
                     std::fs::write(&agents_md, cleaned).ok();
-                    println!("✅ AGENTS.md section removed");
+                    println!("[OK] AGENTS.md section removed");
                 } else {
                     println!("  AGENTS.md section not found");
                 }
             }
 
-            println!("\n✨ Cursor agent uninstallation complete!");
+            println!("\n[DONE] Cursor agent uninstallation complete!");
         }
         _ => {
-            eprintln!("❌ Unknown agent: {}", name);
+            eprintln!("[ERROR] Unknown agent: {}", name);
             std::process::exit(1);
         }
     }
@@ -444,7 +444,7 @@ fn install_pi_agent(home: &std::path::Path, exe_path: &str, force: bool) {
     // Install extension
     let ext_src = src_dir.join("index.ts");
     if ext_src.exists() {
-        println!("📦 Installing PI Extension...");
+        println!("[INSTALL] Installing PI Extension...");
         println!("  Source: {}", ext_src.display());
         println!("  Dest:   {}", ext_dir.display());
 
@@ -452,19 +452,19 @@ fn install_pi_agent(home: &std::path::Path, exe_path: &str, force: bool) {
 
         let ext_dst = ext_dir.join("index.ts");
         if ext_dst.exists() && !force {
-            println!("  ⚠️  Extension already exists (use -f to overwrite)");
+            println!("  [WARN]  Extension already exists (use -f to overwrite)");
         } else {
             // Generate extension with correct exe path
             let ext_content = generate_extension_ts(exe_path);
             fs::write(&ext_dst, ext_content).expect("Failed to write extension file");
-            println!("  ✅ Extension installed!");
+            println!("  [OK] Extension installed!");
         }
     }
 
     // Install skill
     let skill_src = src_dir.join("SKILL.md");
     if skill_src.exists() {
-        println!("\n📚 Installing PI Skill...");
+        println!("\n[SKILL] Installing PI Skill...");
         println!("  Source: {}", skill_src.display());
         println!("  Dest:   {}", skill_dir.display());
 
@@ -472,17 +472,17 @@ fn install_pi_agent(home: &std::path::Path, exe_path: &str, force: bool) {
 
         let skill_dst = skill_dir.join("SKILL.md");
         if skill_dst.exists() && !force {
-            println!("  ⚠️  Skill already exists (use -f to overwrite)");
+            println!("  [WARN]  Skill already exists (use -f to overwrite)");
         } else {
             let skill_content = fs::read_to_string(&skill_src).expect("Failed to read skill file");
             // Update skill content with correct output path
             let updated_content = skill_content.replace("graphify-out", "garfield-out");
             fs::write(&skill_dst, updated_content).expect("Failed to write skill file");
-            println!("  ✅ Skill installed!");
+            println!("  [OK] Skill installed!");
         }
     }
 
-    println!("\n✨ PI agent installation complete!");
+    println!("\n[DONE] PI agent installation complete!");
     println!("\nNext steps:");
     println!("  1. Start PI: pi");
     println!("  2. Type /reload to load the extension");
@@ -499,65 +499,65 @@ fn install_claude_agent(
     let agents_md = cwd.join("AGENTS.md");
     let mcp_config = cwd.join(".claude_desktop_config.json");
 
-    println!("📝 Installing Claude Code integration...");
+    println!("[ADD] Installing Claude Code integration...");
     println!("  AGENTS.md: {}", agents_md.display());
 
     if agents_md.exists() && !force {
         let content = std::fs::read_to_string(&agents_md).unwrap_or_default();
         if content.contains("## garfield") || content.contains("## Garfield") {
-            println!("  ⚠️  AGENTS.md already has garfield section (use -f to overwrite)");
+            println!("  [WARN]  AGENTS.md already has garfield section (use -f to overwrite)");
         } else {
             let new_content = content.trim_end().to_string()
                 + "\n\n"
                 + &generate_garfield_section(garfield_binary);
             std::fs::write(&agents_md, new_content).expect("Failed to write AGENTS.md");
-            println!("  ✅ AGENTS.md section added!");
+            println!("  [OK] AGENTS.md section added!");
         }
     } else {
         let content = generate_garfield_section(garfield_binary);
         std::fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
-        println!("  ✅ AGENTS.md created!");
+        println!("  [OK] AGENTS.md created!");
     }
 
-    println!("\n🔌 Installing Claude Desktop MCP...");
+    println!("\n[EXT] Installing Claude Desktop MCP...");
     println!("  Config: {}", mcp_config.display());
 
     if mcp_config.exists() && !force {
-        println!("  ⚠️  .claude_desktop_config.json already exists (use -f to overwrite)");
+        println!("  [WARN]  .claude_desktop_config.json already exists (use -f to overwrite)");
     } else {
         let content = generate_mcp_config(graph_json_path, garfield_binary);
         std::fs::write(&mcp_config, content).expect("Failed to write MCP config");
-        println!("  ✅ MCP config installed!");
+        println!("  [OK] MCP config installed!");
     }
 
-    println!("\n✨ Claude agent installation complete!");
+    println!("\n[DONE] Claude agent installation complete!");
 }
 
 /// Install Cursor agent (AGENTS.md)
 fn install_cursor_agent(cwd: &std::path::Path, garfield_binary: &str, force: bool) {
     let agents_md = cwd.join("AGENTS.md");
 
-    println!("📝 Installing Cursor integration...");
+    println!("[ADD] Installing Cursor integration...");
     println!("  AGENTS.md: {}", agents_md.display());
 
     if agents_md.exists() && !force {
         let content = std::fs::read_to_string(&agents_md).unwrap_or_default();
         if content.contains("## garfield") || content.contains("## Garfield") {
-            println!("  ⚠️  AGENTS.md already has garfield section (use -f to overwrite)");
+            println!("  [WARN]  AGENTS.md already has garfield section (use -f to overwrite)");
         } else {
             let new_content = content.trim_end().to_string()
                 + "\n\n"
                 + &generate_garfield_section(garfield_binary);
             std::fs::write(&agents_md, new_content).expect("Failed to write AGENTS.md");
-            println!("  ✅ AGENTS.md section added!");
+            println!("  [OK] AGENTS.md section added!");
         }
     } else {
         let content = generate_garfield_section(garfield_binary);
         std::fs::write(&agents_md, content).expect("Failed to write AGENTS.md");
-        println!("  ✅ AGENTS.md created!");
+        println!("  [OK] AGENTS.md created!");
     }
 
-    println!("\n✨ Cursor agent installation complete!");
+    println!("\n[DONE] Cursor agent installation complete!");
 }
 
 /// Generate ## garfield section for AGENTS.md

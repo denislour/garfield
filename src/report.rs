@@ -67,7 +67,7 @@ pub fn generate_report(
     // Diff Summary (if incremental update)
     // ============================================================
     if let Some(diff) = diff_info {
-        content.push_str("## 📊 Changes Since Last Build\n\n");
+        content.push_str("//!== CHANGES Since Last Build\n\n");
         content.push_str(&format!("- {}\n", diff.summary));
         if diff.new_nodes > 0 || diff.new_edges > 0 {
             content.push_str(&format!(
@@ -91,19 +91,19 @@ pub fn generate_report(
     if let Some(info) = &detect_info {
         if info.total_words < 50_000 && info.total_files > 0 {
             content.push_str(&format!(
-                "- ⚠️ Small corpus: {} files · ~{} words\n",
+                "- WARNING: Small corpus: {} files, ~{} words\n",
                 info.total_files, info.total_words
             ));
             content.push_str("  Graph may not add much value for small codebases.\n");
         } else if info.total_words > 500_000 {
             content.push_str(&format!(
-                "- ⚠️ Large corpus: {} files · ~{} words\n",
+                "- WARNING: Large corpus: {} files, ~{} words\n",
                 info.total_files, info.total_words
             ));
             content.push_str("  May have high token cost.\n");
         } else {
             content.push_str(&format!(
-                "- ✓ {} files · ~{} words\n",
+                "- OK: {} files, ~{} words\n",
                 info.total_files, info.total_words
             ));
         }
@@ -170,7 +170,7 @@ pub fn generate_report(
             god.degree
         ));
         content.push_str(&format!(
-            "   📁 {} · source: {}\n",
+            "[{}] {} (source)\n",
             god.source_file, god.node.id
         ));
     }
@@ -196,7 +196,7 @@ pub fn generate_report(
                 conn.source_label, conn.target_label, conn.relation, conn.why
             ));
             content.push_str(&format!(
-                "| ↳ {} → {} | {} | {} |\n",
+                "| => {} ==> {} | {} | {} |\n",
                 conn.source_file, conn.target_file, conf_tag, conn.score
             ));
         }
@@ -238,13 +238,13 @@ pub fn generate_report(
             String::new()
         };
 
-        // Cohesion indicator
+        // Cohesion indicator (HIGH/MEDIUM/LOW)
         let cohesion_indicator = if cohesion >= 0.5 {
-            "🟢"
+            "[HIGH]"
         } else if cohesion >= 0.2 {
-            "🟡"
+            "[MED]"
         } else {
-            "🔴"
+            "[LOW]"
         };
 
         content.push_str(&format!(
@@ -291,7 +291,7 @@ pub fn generate_report(
                 .unwrap_or(&edge.target);
 
             content.push_str(&format!(
-                "- ❓ `{}` → `{}`  [AMBIGUOUS]\n",
+                "- AMBIGUOUS: `{}` -> `{}`\n",
                 src_label, tgt_label
             ));
             content.push_str(&format!(
@@ -332,7 +332,7 @@ pub fn generate_report(
 
         if !isolated.is_empty() {
             let isolated_labels: Vec<_> = isolated.iter().map(|n| n.label.as_str()).collect();
-            content.push_str("### 🔌 Isolated Nodes\n\n");
+            content.push_str("//!-- ISOLATED Nodes\n\n");
             content.push_str("These have ≤1 connection - possible documentation gaps:\n\n");
             for label in isolated_labels {
                 content.push_str(&format!("- `{}`\n", label));
@@ -341,7 +341,7 @@ pub fn generate_report(
         }
 
         if !thin_communities.is_empty() {
-            content.push_str("### 📉 Thin Communities\n\n");
+            content.push_str("//!-- THIN Communities\n\n");
             content.push_str("Too small to be meaningful - may be noise:\n\n");
             for (cid, _) in &thin_communities {
                 let label = analysis
@@ -355,7 +355,7 @@ pub fn generate_report(
         }
 
         if high_ambiguity {
-            content.push_str("### ⚠️ High Ambiguity\n\n");
+            content.push_str("//!WARNING: High Ambiguity\n\n");
             content.push_str(&format!(
                 "{}% of edges are AMBIGUOUS. Review the Ambiguous Edges section above.\n\n",
                 amb_pct
@@ -370,7 +370,7 @@ pub fn generate_report(
     let has_real_questions = questions.iter().any(|q| !q.question.is_empty());
 
     if has_real_questions {
-        content.push_str("## 💡 Suggested Questions\n\n");
+        content.push_str("//!== Suggested Questions\n\n");
         content.push_str("Questions the graph is uniquely positioned to answer:\n\n");
 
         for (i, q) in questions.iter().enumerate() {
@@ -418,13 +418,13 @@ fn is_filtered_node(label: &str) -> bool {
 fn corpus_verdict(graph: &GraphData) -> String {
     let nodes = graph.metadata.total_nodes;
     if nodes < 10 {
-        "⚠️ corpus too small for meaningful graph".to_string()
+        "[!] WARNING: corpus too small for meaningful graph".to_string()
     } else if nodes < 100 {
-        "corpus is small but graph structure adds value".to_string()
+        "[+] corpus is small but graph structure adds value".to_string()
     } else if nodes < 1000 {
-        "✓ corpus is large enough that graph structure adds value".to_string()
+        "[+] OK: corpus is large enough that graph structure adds value".to_string()
     } else {
-        "✓ corpus is very large - graph is essential for navigation".to_string()
+        "[++] OK: corpus is very large - graph is essential for navigation".to_string()
     }
 }
 
