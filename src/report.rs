@@ -318,7 +318,7 @@ pub fn generate_report(
     let thin_communities: Vec<_> = analysis
         .community_sizes
         .iter()
-        .filter(|(_, &size)| size < 3)
+        .filter(|&(_, &size)| size < 3)
         .collect();
 
     let gap_count = isolated.len() + thin_communities.len();

@@ -1,7 +1,7 @@
 [package]
 name = "garfield"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Build knowledge graph from source code"
 license = "MIT"
 
