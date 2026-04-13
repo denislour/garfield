@@ -3,7 +3,6 @@
 [![CI](https://github.com/denislour/garfield/actions/workflows/ci.yml/badge.svg)](https://github.com/denislour/garfield/actions)
 [![crates.io](https://img.shields.io/crates/v/garfield)](https://crates.io/crates/garfield)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?color=green)](LICENSE)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?color=gray&logo=linkedin&label=denislour&labelColor=blue)](https://www.linkedin.com/in/denislour/)
 
 **Build knowledge graphs from source code** - A Rust-native code analysis tool that extracts, analyzes, and visualizes relationships in your codebase.
 
