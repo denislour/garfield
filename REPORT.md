@@ -5,63 +5,37 @@
 
 ---
 
-## ✅ Tasks Completed
+## Full Flow Demo
 
-| # | Task | Status |
-|---|------|--------|
-| 1 | Cleanup unused files | ✅ Done |
-| 2 | Louvain → Leiden | ✅ Done |
-| 3 | cluster → community | ✅ Done |
-| 4 | Test organization | ✅ Done |
-| 5 | 3-Tier Lazy Loading | 📋 Pending |
-| 6 | **Hyperedge Detection** | ✅ **DONE** |
-| 7 | Combined 3-Tier + Hyperedge | 📋 Pending |
-| 8 | E2E Tests | 📋 Pending |
-| 9 | Incremental Build | 📋 Pending |
-| 10 | Cross-File Hyperedge | 📋 Pending |
-| 11 | Advanced Query | 📋 Pending |
-| 12 | Language Extensions | ✅ Done (11 languages) |
-
----
-
-## Hyperedge - Complete Flow ✅
-
-### Flow Diagram
-
-```
-BUILD:                          QUERY (explain):
-────────                        ───────────────
-extract → Node[]                cargo run -- explain "build_graph"
-     ↓                                ↓
-build_graph → GraphData         get_node() → NodeDetails
-     ↓                                ↓
-detect_hyperedges()            → NODE + HYPEREDGE INFO
-     ↓                                ↓
-graph.json ← Hyperedge[]       ═══ NODE ═══
-                                ID: build:build_graph
-                                Label: build_graph
-                                
-                                ═══ MODULE (Hyperedge) ═══
-                                Module: build module      ← ✨
-                                Members: 18 functions    ← ✨
-                                Confidence: 1.00         ← ✨
-```
-
----
-
-## Commands
-
-### Build
 ```bash
+# 1. Build
 cargo run -- build ./src
-```
 
-### Explain (Node + Hyperedge)
-```bash
+# 2. Query - tự động show hyperedge
+cargo run -- query "build_graph"
+
+# 3. Explain - chi tiết hyperedge
 cargo run -- explain "build_graph"
 ```
 
-### Output:
+---
+
+## Output Examples
+
+### Query Output (có hyperedge):
+```
+Query: "build_graph"
+Traversal: BFS depth=3 | Start: build_graph | 26 nodes found
+
+## Nodes
+  • global [./src/lib.rs @ L?] (community: 2)
+  • global [build module] [./src/build.rs @ L?] (community: 9)    ← ✨ [module]
+  • split_oversized [build module] [./src/build.rs @ L?] (community: 9)  ← ✨
+  • dedup_edges [build module] [./src/build.rs @ L7] (community: 9)      ← ✨
+  • build_graph [build module] [./src/build.rs @ L26] (community: 9)    ← ✨
+```
+
+### Explain Output (chi tiết):
 ```
 ═══ NODE ═══
 ID: build:build_graph
@@ -69,7 +43,7 @@ Label: build_graph
 File: ./src/build.rs
 Location: L26
 
-═══ MODULE (Hyperedge) ═══
+═══ MODULE (Hyperedge) ═══        ← ✨ Hyperedge section
 Module: build module
 Members: 18 functions
 Confidence: 1.00
@@ -80,21 +54,52 @@ Confidence: 1.00
 
 ---
 
-## Hyperedge Detection - 3 Algorithms
+## Hyperedge Flow
 
-| Algorithm | Time | Description |
-|-----------|------|-------------|
-| **File-Based** | O(n) | Group nodes by source file |
-| **Call Chain** | O(n²) | Find A→B→C→D chains |
-| **Config Pattern** | O(n) | K8s, Docker, Terraform |
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. BUILD                                                  │
+│  cargo run -- build ./src                                  │
+│                                                              │
+│  Source → extract → build_graph → detect_hyperedges        │
+│                                              ↓              │
+│                                    graph.json               │
+│                                    • nodes[]                │
+│                                    • edges[]                │
+│                                    • hyperedges[]           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│  2. QUERY (tự động show hyperedge)                        │
+│  cargo run -- query "build_graph"                          │
+│                                                              │
+│  → Tìm nodes matching "build_graph"                       │
+│  → Tự động annotate với [module_name]                     │
+│                                                              │
+│  Output:                                                    │
+│    • build_graph [build module] ← ✨ hyperedge info         │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│  3. EXPLAIN (chi tiết hyperedge)                           │
+│  cargo run -- explain "build_graph"                         │
+│                                                              │
+│  → NODE: build_graph                                        │
+│  → MODULE: build module (18 functions) ← ✨                  │
+│  → CALLS: connections                                       │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Language Support (11 Languages)
+## Detected Hyperedges (4 modules)
 
-| Language | Extensions |
-|----------|------------|
-| Rust, Python, Ruby, Java, JavaScript, TypeScript, Scala, Lua, PHP, Go, Bash |
+| Module | Functions |
+|--------|-----------|
+| build module | 18 |
+| leiden module | 17 |
+| validate module | 14 |
+| export module | 9 |
 
 ---
 
@@ -102,16 +107,6 @@ Confidence: 1.00
 
 ```
 Total Tests: 150 PASSING ✅
-```
-
----
-
-## Git History
-
-```
-e6b1338 feat: wire hyperedge into explain command
-1e22995 docs: update REPORT.md with complete hyperedge flow
-2c25805 feat: add hyperedge info to query flow
 ```
 
 ---
