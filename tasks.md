@@ -25,7 +25,7 @@ luu y moi 1 task ben duoi, neu hoan thanh xong hay commit no, va nho luu y phai 
    │  → CÁCH 1: Thư mục con theo module ✅                                    │
    │                                                                             │
 
-5. 3-TIER LAZY LOADING (Storage)
+5. 3-TIER LAZY LOADING (Storage) ✅ DONE
 ─────────────────────────────────────────────────────────────────────────────────
 Purpose: Tách biệt lưu trữ content để tối ưu BUILD vs QUERY
 
@@ -268,7 +268,7 @@ pub fn process_candidates(mut candidates: Vec<HyperedgeCandidate>) -> Vec<Hypere
 │  garfield build ./src --hyperedge=config  # Config patterns only           │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-8. E2E TEST với mock trên
+8. E2E TEST với mock trên ✅ DONE
 ─────────────────────────────────────────────────────────────────────────────────
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
