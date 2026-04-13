@@ -1,0 +1,17 @@
+{
+  "name": "garfield",
+  "private": true,
+  "devDependencies": {
+    "prettier": "^3.2.0",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "rust:fmt": "cargo fmt",
+    "rust:clippy": "cargo clippy -- -D warnings",
+    "check": "cargo fmt -- --check && cargo clippy && eslint ."
+  }
+}
