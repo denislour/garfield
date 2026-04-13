@@ -169,10 +169,7 @@ pub fn generate_report(
             god.node.label,
             god.degree
         ));
-        content.push_str(&format!(
-            "[{}] {} (source)\n",
-            god.source_file, god.node.id
-        ));
+        content.push_str(&format!("[{}] {} (source)\n", god.source_file, god.node.id));
     }
     content.push('\n');
 

@@ -90,10 +90,7 @@ fn test_hyperedge_call_chain_detection() {
     let hyperedges = detect_hyperedges(&graph);
 
     // Should detect call chain: a->b->c->d
-    assert!(
-        !hyperedges.is_empty(),
-        "Call chain should create hyperedge"
-    );
+    assert!(!hyperedges.is_empty(), "Call chain should create hyperedge");
 
     // Should have a call chain hyperedge
     let chain_hyperedges: Vec<_> = hyperedges
@@ -336,7 +333,8 @@ fn test_directory_groups_have_valid_labels() {
         for he in &dir_hyperedges {
             // Label should contain "directory"
             assert!(
-                he.label.to_lowercase().contains("directory") || he.label.to_lowercase().contains("core"),
+                he.label.to_lowercase().contains("directory")
+                    || he.label.to_lowercase().contains("core"),
                 "Directory hyperedge label should mention the directory"
             );
             // Should have at least 6 nodes
