@@ -65,6 +65,7 @@ pub fn run_build(root: &str, output: &str, update: bool) -> anyhow::Result<Build
             total_nodes: 0,
             total_edges: 0,
             communities: 0,
+            hyperedges: 0,
             changed_files: 0,
             cached_files: 0,
         });
@@ -131,15 +132,26 @@ pub fn run_build(root: &str, output: &str, update: bool) -> anyhow::Result<Build
         build_graph(all_extractions)
     };
 
-    // 5. Validate
-    if let Err(e) = validate_graph(&graph) {
+    // 5. Detect hyperedges
+    println!("Detecting hyperedges...");
+    let hyperedges = detect_hyperedges(&graph);
+    println!("Found {} hyperedges", hyperedges.len());
+
+    // Add hyperedges to graph
+    let mut graph_with_hyperedges = graph;
+    for he in hyperedges {
+        graph_with_hyperedges.hyperedges.push(he);
+    }
+
+    // 6. Validate
+    if let Err(e) = validate_graph(&graph_with_hyperedges) {
         eprintln!("Warning: Validation error: {:?}", e);
     }
 
-    // 6. Export JSON
-    to_json(&graph, &graph_path)?;
+    // 7. Export JSON
+    to_json(&graph_with_hyperedges, &graph_path)?;
     let report_path = output_path.join("GRAPH_REPORT.md");
-    generate_report(&graph, &report_path, Some(detect_info), None)?;
+    generate_report(&graph_with_hyperedges, &report_path, Some(detect_info), None)?;
 
     // 8. Update cache
     if update {
@@ -148,9 +160,10 @@ pub fn run_build(root: &str, output: &str, update: bool) -> anyhow::Result<Build
     }
 
     Ok(BuildSummary {
-        total_nodes: graph.metadata.total_nodes,
-        total_edges: graph.metadata.total_edges,
-        communities: graph.metadata.communities,
+        total_nodes: graph_with_hyperedges.metadata.total_nodes,
+        total_edges: graph_with_hyperedges.metadata.total_edges,
+        communities: graph_with_hyperedges.metadata.communities,
+        hyperedges: graph_with_hyperedges.hyperedges.len(),
         changed_files: changed.len(),
         cached_files: cached.len(),
     })

@@ -240,6 +240,7 @@ pub struct BuildSummary {
     pub total_nodes: usize,
     pub total_edges: usize,
     pub communities: usize,
+    pub hyperedges: usize,
     pub changed_files: usize,
     pub cached_files: usize,
 }
