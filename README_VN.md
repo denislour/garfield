@@ -145,7 +145,7 @@ $ garfield build ./src --output garfield-out
 2. EXTRACT   → Parse AST, trích xuất functions/classes/imports
 3. BUILD     → Tạo nodes và edges từ extraction
 4. HYPEREDGE → Detect code groups sử dụng 4 thuật toán
-5. CLUSTER   → Chạy Leiden để tìm communities
+5. COMMUNITY → Chạy Leiden để tìm communities
 6. VALIDATE  → Check graph integrity
 7. EXPORT    → Lưu graph.json + GRAPH_REPORT.md
 ```

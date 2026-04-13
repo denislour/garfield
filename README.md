@@ -145,7 +145,7 @@ $ garfield build ./src --output garfield-out
 2. EXTRACT   → Parse AST, extract functions/classes/imports
 3. BUILD     → Create nodes and edges from extraction
 4. HYPEREDGE → Detect code groups using 4 algorithms
-5. CLUSTER   → Run Leiden to find communities
+5. COMMUNITY → Run Leiden to find communities
 6. VALIDATE  → Check graph integrity
 7. EXPORT    → Save graph.json + GRAPH_REPORT.md
 ```
