@@ -248,7 +248,7 @@ fn detect_config_patterns(graph: &GraphData) -> Vec<HyperedgeCandidate> {
 /// Algorithm 4: Directory-Based Groups (Cross-File modules)
 /// Groups nodes by directory prefix - O(n)
 /// Example: src/auth/login.rs + src/auth/token.rs → "auth" module
-fn detect_directory_groups(graph: &GraphData) -> Vec<HyperedgeCandidate> {
+pub fn detect_directory_groups(graph: &GraphData) -> Vec<HyperedgeCandidate> {
     use std::path::Path;
 
     let mut by_dir: HashMap<String, Vec<&Node>> = HashMap::new();
