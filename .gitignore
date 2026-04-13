@@ -22,11 +22,6 @@ Thumbs.db
 garfield-out/
 *.json
 
-# Config files - exceptions
-!.prettierrc
-!.eslintrc.json
-!package.json
-
 # Test artifacts
 *.profraw
 *.prof
