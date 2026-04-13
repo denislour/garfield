@@ -1,5 +1,10 @@
 # Garfield
 
+[![CI](https://github.com/denislour/garfield/actions/workflows/ci.yml/badge.svg)](https://github.com/denislour/garfield/actions)
+[![crates.io](https://img.shields.io/crates/v/garfield)](https://crates.io/crates/garfield)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?color=green)](LICENSE)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?color=gray&logo=linkedin&label=denislour&labelColor=blue)](https://www.linkedin.com/in/denislour/)
+
 **Build knowledge graphs from source code** - A Rust-native code analysis tool that extracts, analyzes, and visualizes relationships in your codebase.
 
 ## What is Garfield?
@@ -32,12 +37,12 @@ flowchart TD
         H --> C[Cluster Communities]
         C --> V[Validate & Export]
     end
-    
+
     subgraph Query["Query Pipeline"]
         Q[Query] --> P[Find Paths]
         P --> S[Score & Rank]
     end
-    
+
     subgraph Algorithms["Core Algorithms"]
         L[Leiden Community Detection]
         HE[Hyperedge Detection]
@@ -70,7 +75,7 @@ Leiden = Louvain + Refinement Phase
 
 Where:
 - `Σ_in`: sum of weights to target community
-- `Σ_out`: sum of weights from current community  
+- `Σ_out`: sum of weights from current community
 - `m`: total edge weights
 - `k_i`: node weight (degree)
 - `Σ_total`: target community weight
@@ -119,7 +124,7 @@ src/api/v1/*.rs → "api/v1" module
 - **Complexity**: O(V + E)
 - **Best for**: Shortest path, level-by-level exploration
 
-#### DFS (Depth-First Search)  
+#### DFS (Depth-First Search)
 - **Use**: Deep exploration, finding complete paths
 - **Complexity**: O(V + E)
 - **Best for**: Deep call stacks, complete dependency chains
