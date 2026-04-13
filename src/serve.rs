@@ -316,13 +316,20 @@ pub fn subgraph_to_text(
         .collect();
     node_degrees.sort_by(|a, b| b.1.cmp(&a.1));
 
-    // Render nodes
+    // Render nodes with hyperedge info
     lines.push("## Nodes".to_string());
     for (node_id, _) in &node_degrees {
         if let Some(node) = graph.nodes.iter().find(|n| &n.id == node_id) {
+            // Find hyperedge for this node
+            let hyperedge_label = graph.hyperedges.iter()
+                .find(|he| he.nodes.contains(&node.id))
+                .map(|he| format!(" [{}]", he.label))
+                .unwrap_or_default();
+
             lines.push(format!(
-                "  • {} [{} @ {}] (community: {})",
+                "  • {}{} [{} @ {}] (community: {})",
                 node.label,
+                hyperedge_label,
                 node.source_file,
                 node.source_location,
                 node.community.unwrap_or(0)
