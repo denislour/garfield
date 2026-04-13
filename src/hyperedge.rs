@@ -61,6 +61,11 @@ pub fn detect_hyperedges(graph: &GraphData) -> Vec<Hyperedge> {
     let config_candidates = detect_config_patterns(graph);
     candidates.extend(config_candidates);
 
+    // Algorithm 4: Directory-Based (Cross-File modules) - O(n)
+    // Groups files by directory prefix: src/auth/*.rs → "auth" module
+    let dir_candidates = detect_directory_groups(graph);
+    candidates.extend(dir_candidates);
+
     // Process candidates: dedup + filter + sort
     process_candidates(candidates)
 }
@@ -235,6 +240,63 @@ fn detect_config_patterns(graph: &GraphData) -> Vec<HyperedgeCandidate> {
     }
 
     candidates
+}
+
+/// Algorithm 4: Directory-Based Groups (Cross-File modules)
+/// Groups nodes by directory prefix - O(n)
+/// Example: src/auth/login.rs + src/auth/token.rs → "auth" module
+fn detect_directory_groups(graph: &GraphData) -> Vec<HyperedgeCandidate> {
+    use std::path::Path;
+    
+    let mut by_dir: HashMap<String, Vec<&Node>> = HashMap::new();
+    
+    for node in &graph.nodes {
+        let path = Path::new(&node.source_file);
+        
+        // Get parent directory (skip 1 level to get meaningful prefix)
+        let dir = path
+            .parent()
+            .and_then(|p| p.components().last())
+            .map(|c| c.as_os_str().to_string_lossy().to_string())
+            .unwrap_or_else(|| "root".to_string());
+        
+        // Skip if root or hidden directory
+        if dir == "root" || dir.starts_with('.') || dir.starts_with('/') {
+            continue;
+        }
+        
+        by_dir.entry(dir.clone()).or_default().push(node);
+    }
+    
+    by_dir
+        .into_iter()
+        .filter(|(_, nodes)| nodes.len() >= MIN_NODES * 2)  // Need 6+ nodes for directory grouping
+        .filter(|(_, nodes)| {
+            // Check all nodes are in the same directory
+            let first_dir = Path::new(&nodes[0].source_file)
+                .parent()
+                .map(|p| p.to_string_lossy().to_string());
+            nodes.iter().all(|n| {
+                Path::new(&n.source_file)
+                    .parent()
+                    .map(|p| p.to_string_lossy().to_string()) == first_dir
+            })
+        })
+        .map(|(dir, nodes)| {
+            let node_ids: Vec<String> = nodes.iter().map(|n| n.id.clone()).collect();
+            let score = calculate_cohesion(&node_ids, graph);
+            
+            HyperedgeCandidate {
+                id: format!("dir_{}", dir.to_lowercase()),
+                label: format!("{} directory", dir),
+                nodes: node_ids,
+                relation: "directory_module".to_string(),
+                confidence: Confidence::Inferred,
+                source_file: nodes.first().map(|n| n.source_file.clone()).unwrap_or_default(),
+                score,
+            }
+        })
+        .collect()
 }
 
 /// Calculate cohesion score for a group of nodes

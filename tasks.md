@@ -765,7 +765,7 @@ Build flow:
 4. Merge vào graph.json (không overwrite)
 5. Update cache/ với files mới
 
-## 10. CROSS-FILE HYPEREDGE
+## 10. CROSS-FILE HYPEREDGE ✅ DONE
 ─────────────────────────────────────────────────────────────────────────────────
 Purpose: Module span nhiều files (auth = login.rs + token.rs + middleware.rs)
 
