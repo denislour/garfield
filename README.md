@@ -1,6 +1,6 @@
 # Garfield
 
-[![CI](https://github.com/denislour/garfield/actions/workflows/ci.yml/badge.svg)](https://github.com/denislour/garfield/actions)
+[![CI](https://github.com/denislour/garfield/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/denislour/garfield/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/garfield)](https://crates.io/crates/garfield)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?color=green)](LICENSE)
 
