@@ -29,3 +29,6 @@ garfield-out/
 # Misc
 *.log
 *.tmp
+
+# Docs
+docs

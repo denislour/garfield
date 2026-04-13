@@ -84,16 +84,13 @@ impl FileCache {
     pub fn add_entry(&mut self, entry: CacheEntry) {
         let path = entry.path.clone();
         let source_file = entry.source_file.clone();
-        
+
         // Add to entries
         self.entries.insert(path.clone(), entry);
-        
+
         // Update by_source_file index
         if let Some(sf) = source_file {
-            self.by_source_file
-                .entry(sf)
-                .or_default()
-                .push(path);
+            self.by_source_file.entry(sf).or_default().push(path);
         }
     }
 
@@ -116,17 +113,17 @@ impl FileCache {
 }
 
 /// Extract body content from Markdown (strip YAML frontmatter)
-/// 
+///
 /// For Markdown files with YAML frontmatter like:
 /// ```markdown
 /// ---
 /// title: My Document
 /// tags: [foo, bar]
 /// ---
-/// 
+///
 /// # Actual content
 /// ```
-/// 
+///
 /// Only the body after the closing `---` is hashed, so metadata changes
 /// don't invalidate the cache.
 fn extract_md_body(content: &str) -> &str {
@@ -139,16 +136,18 @@ fn extract_md_body(content: &str) -> &str {
 }
 
 /// Compute SHA256 hash of file content
-/// 
+///
 /// For .md files, only the body (below YAML frontmatter) is hashed.
 /// This prevents cache invalidation on metadata changes.
 pub fn compute_hash(path: &Path) -> anyhow::Result<String> {
     let content = fs::read(path)?;
-    
-    let hash_input = if path.extension()
+
+    let hash_input = if path
+        .extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_lowercase())
-        .unwrap_or_default() == "md" 
+        .unwrap_or_default()
+        == "md"
     {
         // For MD files, hash only the body
         let content_str = String::from_utf8_lossy(&content);
@@ -162,7 +161,7 @@ pub fn compute_hash(path: &Path) -> anyhow::Result<String> {
             path.to_string_lossy()
         )
     };
-    
+
     let mut hasher = Sha256::new();
     hasher.update(hash_input.as_bytes());
     let result = hasher.finalize();
@@ -170,7 +169,7 @@ pub fn compute_hash(path: &Path) -> anyhow::Result<String> {
 }
 
 /// Check which files have changed
-/// 
+///
 /// Returns (changed_files, unchanged_files)
 pub fn check_cache(files: &[PathBuf], cache: &FileCache) -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut changed = Vec::new();
@@ -198,7 +197,11 @@ pub fn check_cache(files: &[PathBuf], cache: &FileCache) -> (Vec<PathBuf>, Vec<P
 }
 
 /// Update cache with new file hashes
-pub fn update_cache(cache: &mut FileCache, files: &[PathBuf], source_file: Option<&str>) -> anyhow::Result<()> {
+pub fn update_cache(
+    cache: &mut FileCache,
+    files: &[PathBuf],
+    source_file: Option<&str>,
+) -> anyhow::Result<()> {
     for file in files {
         let path_str = file.to_string_lossy().to_string();
 
@@ -224,7 +227,8 @@ pub fn update_cache(cache: &mut FileCache, files: &[PathBuf], source_file: Optio
 
 /// Clear cache for specific files
 pub fn clear_cache(cache: &mut FileCache, files: &[PathBuf]) {
-    let paths: Vec<String> = files.iter()
+    let paths: Vec<String> = files
+        .iter()
         .map(|p| p.to_string_lossy().to_string())
         .collect();
     cache.remove_entries(&paths);
@@ -256,16 +260,16 @@ pub fn get_cache_dir(root: &Path) -> PathBuf {
 }
 
 /// Load cached extraction for a file
-/// 
+///
 /// Returns cached nodes/edges if hash matches, else None
 pub fn load_cached(path: &Path, root: &Path) -> Option<CachedExtraction> {
     let hash = compute_hash(path).ok()?;
     let cache_file = get_cache_dir(root).join(format!("{}.json", hash));
-    
+
     if !cache_file.exists() {
         return None;
     }
-    
+
     serde_json::from_str(&fs::read_to_string(cache_file).ok()?).ok()
 }
 
@@ -273,14 +277,14 @@ pub fn load_cached(path: &Path, root: &Path) -> Option<CachedExtraction> {
 pub fn save_cached(path: &Path, result: &CachedExtraction, root: &Path) -> anyhow::Result<()> {
     let hash = compute_hash(path)?;
     let cache_file = get_cache_dir(root).join(format!("{}.json", hash));
-    
+
     let json = serde_json::to_string_pretty(result)?;
-    
+
     // Write atomically using temp file
     let tmp_file = cache_file.with_extension("tmp");
     fs::write(&tmp_file, json)?;
     std::fs::rename(tmp_file, cache_file)?;
-    
+
     Ok(())
 }
 
@@ -294,17 +298,22 @@ pub struct CachedExtraction {
 }
 
 /// Check semantic cache for multiple files
-/// 
+///
 /// Returns (cached_nodes, cached_edges, cached_hyperedges, uncached_files)
 pub fn check_semantic_cache(
     files: &[String],
     root: &Path,
-) -> (Vec<crate::types::Node>, Vec<crate::types::Edge>, Vec<crate::types::Hyperedge>, Vec<String>) {
+) -> (
+    Vec<crate::types::Node>,
+    Vec<crate::types::Edge>,
+    Vec<crate::types::Hyperedge>,
+    Vec<String>,
+) {
     let mut cached_nodes = Vec::new();
     let mut cached_edges = Vec::new();
     let mut cached_hyperedges = Vec::new();
     let mut uncached = Vec::new();
-    
+
     for fpath in files {
         let path = Path::new(fpath);
         if let Some(cached) = load_cached(path, root) {
@@ -315,12 +324,12 @@ pub fn check_semantic_cache(
             uncached.push(fpath.clone());
         }
     }
-    
+
     (cached_nodes, cached_edges, cached_hyperedges, uncached)
 }
 
 /// Save semantic cache grouped by source_file
-/// 
+///
 /// Groups nodes and edges by source_file, saves one cache entry per file
 pub fn save_semantic_cache(
     nodes: &[crate::types::Node],
@@ -329,40 +338,43 @@ pub fn save_semantic_cache(
     root: &Path,
 ) -> anyhow::Result<usize> {
     use std::collections::HashMap;
-    
+
     // Group by source_file
     let mut by_file: HashMap<String, CachedExtraction> = HashMap::new();
-    
+
     for node in nodes {
         let src = &node.source_file;
         if !src.is_empty() {
-            by_file.entry(src.clone())
+            by_file
+                .entry(src.clone())
                 .or_default()
                 .nodes
                 .push(node.clone());
         }
     }
-    
+
     for edge in edges {
         let src = &edge.source_file;
         if !src.is_empty() {
-            by_file.entry(src.clone())
+            by_file
+                .entry(src.clone())
                 .or_default()
                 .edges
                 .push(edge.clone());
         }
     }
-    
+
     for hyperedge in hyperedges {
         let src = &hyperedge.source_file;
         if !src.is_empty() {
-            by_file.entry(src.clone())
+            by_file
+                .entry(src.clone())
                 .or_default()
                 .hyperedges
                 .push(hyperedge.clone());
         }
     }
-    
+
     // Save each file's cache
     let mut saved = 0;
     for (fpath, result) in by_file {
@@ -372,7 +384,7 @@ pub fn save_semantic_cache(
             saved += 1;
         }
     }
-    
+
     Ok(saved)
 }
 
@@ -380,17 +392,22 @@ pub fn save_semantic_cache(
 pub fn clear_all_cache(root: &Path) -> usize {
     let cache_dir = get_cache_dir(root);
     let mut removed = 0;
-    
+
     if let Ok(entries) = fs::read_dir(cache_dir) {
         for entry in entries.flatten() {
-            if entry.path().extension().map(|e| e == "json").unwrap_or(false) {
+            if entry
+                .path()
+                .extension()
+                .map(|e| e == "json")
+                .unwrap_or(false)
+            {
                 if fs::remove_file(entry.path()).is_ok() {
                     removed += 1;
                 }
             }
         }
     }
-    
+
     removed
 }
 
@@ -411,11 +428,11 @@ mod tests {
         let hash = compute_hash(&file_path).unwrap();
         assert_eq!(hash.len(), 64); // SHA256 produces 64 hex characters
     }
-    
+
     #[test]
     fn test_md_body_only_hash() {
         let dir = TempDir::new().unwrap();
-        
+
         // Create MD file with YAML frontmatter
         let md_path = dir.path().join("test.md");
         let md_content = r#"---
@@ -427,9 +444,9 @@ tags: [foo, bar]
 This is the body.
 "#;
         fs::write(&md_path, md_content).unwrap();
-        
+
         let hash1 = compute_hash(&md_path).unwrap();
-        
+
         // Change only metadata
         let md_content_changed = r#"---
 title: Changed Title
@@ -440,12 +457,12 @@ tags: [different]
 This is the body.
 "#;
         fs::write(&md_path, md_content_changed).unwrap();
-        
+
         let hash2 = compute_hash(&md_path).unwrap();
-        
+
         // Hashes should be SAME because only frontmatter changed (body-only hashing)
         assert_eq!(hash1, hash2);
-        
+
         // Change only body
         let md_body_changed = r#"---
 title: My Document
@@ -456,9 +473,9 @@ tags: [foo, bar]
 This is the body - MODIFIED.
 "#;
         fs::write(&md_path, md_body_changed).unwrap();
-        
+
         let hash3 = compute_hash(&md_path).unwrap();
-        
+
         // Hash should change when body changes
         assert_ne!(hash1, hash3);
     }
@@ -480,29 +497,40 @@ This is the body - MODIFIED.
         assert_eq!(changed.len(), 0);
         assert_eq!(unchanged.len(), 1);
     }
-    
+
     #[test]
     fn test_group_by_source_file() {
         let mut cache = FileCache::new();
-        
+
         let dir = TempDir::new().unwrap();
         let file1 = dir.path().join("module1").join("a.py");
         let file2 = dir.path().join("module1").join("b.py");
         let file3 = dir.path().join("module2").join("c.py");
-        
+
         fs::create_dir_all(file1.parent().unwrap()).unwrap();
         fs::create_dir_all(file3.parent().unwrap()).unwrap();
-        
+
         fs::write(&file1, "def foo(): pass").unwrap();
         fs::write(&file2, "def bar(): pass").unwrap();
         fs::write(&file3, "def baz(): pass").unwrap();
-        
-        update_cache(&mut cache, &[file1.clone(), file2.clone(), file3.clone()], Some("module1")).unwrap();
+
+        update_cache(
+            &mut cache,
+            &[file1.clone(), file2.clone(), file3.clone()],
+            Some("module1"),
+        )
+        .unwrap();
         update_cache(&mut cache, &[file3.clone()], Some("module2")).unwrap();
-        
+
         // Check by_source_file indexing
         // First call adds all 3 files to module1, second call adds file3 to module2
-        assert_eq!(cache.by_source_file.get("module1").map(|v| v.len()), Some(3));
-        assert_eq!(cache.by_source_file.get("module2").map(|v| v.len()), Some(1));
+        assert_eq!(
+            cache.by_source_file.get("module1").map(|v| v.len()),
+            Some(3)
+        );
+        assert_eq!(
+            cache.by_source_file.get("module2").map(|v| v.len()),
+            Some(1)
+        );
     }
 }
