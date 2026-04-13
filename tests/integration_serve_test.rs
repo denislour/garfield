@@ -5,7 +5,7 @@ use garfield::{
         bfs, dfs, find_shortest_path, get_community, get_hyperedge, get_neighbors, get_node,
         score_nodes, subgraph_to_text,
     },
-    types::{Edge, GraphData, GraphMetadata, Hyperedge, Node, Confidence},
+    types::{Confidence, Edge, GraphData, GraphMetadata, Hyperedge, Node},
 };
 use std::collections::HashSet;
 
@@ -149,7 +149,10 @@ fn test_dfs_vs_bfs_difference() {
     let (bfs_nodes, _) = bfs(&graph, &start_nodes, 3);
     let (dfs_nodes, _) = dfs(&graph, &start_nodes, 3);
 
-    assert_eq!(bfs_nodes, dfs_nodes, "BFS and DFS should find same reachable nodes");
+    assert_eq!(
+        bfs_nodes, dfs_nodes,
+        "BFS and DFS should find same reachable nodes"
+    );
 }
 
 #[test]
@@ -255,12 +258,9 @@ fn test_get_hyperedge_not_found() {
 #[test]
 fn test_subgraph_to_text_with_nodes() {
     let graph = create_test_graph();
-    let node_ids: HashSet<String> = vec![
-        "fn_add".to_string(),
-        "fn_subtract".to_string(),
-    ]
-    .into_iter()
-    .collect();
+    let node_ids: HashSet<String> = vec!["fn_add".to_string(), "fn_subtract".to_string()]
+        .into_iter()
+        .collect();
 
     let output = subgraph_to_text(&graph, &node_ids, &[], 1000);
 
@@ -276,7 +276,10 @@ fn test_subgraph_to_text_empty_input() {
     let output = subgraph_to_text(&graph, &node_ids, &[], 1000);
 
     // Output should not crash with empty input
-    assert!(!output.is_empty() || output.is_empty(), "Should handle empty input gracefully");
+    assert!(
+        !output.is_empty() || output.is_empty(),
+        "Should handle empty input gracefully"
+    );
 }
 
 #[test]

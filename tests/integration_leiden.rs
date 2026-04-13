@@ -1,6 +1,9 @@
 //! Comprehensive unit tests for Leiden community detection algorithm
 
-use garfield::{cluster, types::{GraphData, GraphMetadata, Node, Edge, Confidence}};
+use garfield::{
+    cluster,
+    types::{Confidence, Edge, GraphData, GraphMetadata, Node},
+};
 
 fn create_test_node(id: &str, source_file: &str) -> Node {
     Node {
@@ -20,7 +23,11 @@ fn create_test_edge(source: &str, target: &str, weight: f64) -> Edge {
         source: source.to_string(),
         target: target.to_string(),
         relation: "calls".to_string(),
-        confidence: if weight >= 1.0 { Confidence::Extracted } else { Confidence::Inferred },
+        confidence: if weight >= 1.0 {
+            Confidence::Extracted
+        } else {
+            Confidence::Inferred
+        },
         confidence_score: weight,
         source_file: String::new(),
         note: None,
@@ -30,7 +37,7 @@ fn create_test_edge(source: &str, target: &str, weight: f64) -> Edge {
 fn create_graph(nodes: Vec<&str>, edges: Vec<(&str, &str, f64)>) -> GraphData {
     let nodes_count = nodes.len();
     let edges_count = edges.len();
-    
+
     let nodes: Vec<Node> = nodes
         .iter()
         .map(|n| create_test_node(n, "src/mod.rs"))
@@ -107,10 +114,7 @@ mod leiden_weights {
 
     #[test]
     fn test_high_weight_connections() {
-        let graph = create_graph(
-            vec!["a", "b", "c"],
-            vec![("a", "b", 10.0), ("b", "c", 0.1)],
-        );
+        let graph = create_graph(vec!["a", "b", "c"], vec![("a", "b", 10.0), ("b", "c", 0.1)]);
         let result = cluster(&graph);
         // a and b should likely be together
         assert!(result.assignments[0] == result.assignments[1] || result.assignments.len() == 3);
@@ -118,10 +122,7 @@ mod leiden_weights {
 
     #[test]
     fn test_inferred_vs_extracted_confidence() {
-        let graph = create_graph(
-            vec!["a", "b"],
-            vec![("a", "b", 0.5)],
-        );
+        let graph = create_graph(vec!["a", "b"], vec![("a", "b", 0.5)]);
         let result = cluster(&graph);
         // Edge exists, should be same community
         assert_eq!(result.assignments[0], result.assignments[1]);
@@ -238,10 +239,7 @@ mod leiden_properties {
 
     #[test]
     fn test_community_ids_non_negative() {
-        let graph = create_graph(
-            vec!["a", "b", "c"],
-            vec![("a", "b", 1.0)],
-        );
+        let graph = create_graph(vec!["a", "b", "c"], vec![("a", "b", 1.0)]);
         let result = cluster(&graph);
         for &comm in &result.assignments {
             assert!(comm >= 0);
@@ -265,20 +263,14 @@ mod leiden_edge_cases {
 
     #[test]
     fn test_self_loops_handled() {
-        let graph = create_graph(
-            vec!["a", "b"],
-            vec![("a", "b", 1.0)],
-        );
+        let graph = create_graph(vec!["a", "b"], vec![("a", "b", 1.0)]);
         let result = cluster(&graph);
         assert_eq!(result.assignments.len(), 2);
     }
 
     #[test]
     fn test_no_edges() {
-        let graph = create_graph(
-            vec!["a", "b", "c"],
-            vec![],
-        );
+        let graph = create_graph(vec!["a", "b", "c"], vec![]);
         let result = cluster(&graph);
         // Each node in its own community
         assert_eq!(result.assignments.len(), 3);
@@ -292,10 +284,7 @@ mod cohesion_tests {
 
     #[test]
     fn test_cohesion_scores_valid() {
-        let graph = create_graph(
-            vec!["a", "b", "c"],
-            vec![("a", "b", 1.0), ("b", "c", 1.0)],
-        );
+        let graph = create_graph(vec!["a", "b", "c"], vec![("a", "b", 1.0), ("b", "c", 1.0)]);
         let result = cluster(&graph);
         for (_, &score) in &result.cohesion_scores {
             assert!((0.0..=1.0).contains(&score));

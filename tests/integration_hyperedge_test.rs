@@ -2,7 +2,7 @@
 
 use garfield::{
     build_graph, detect_hyperedges,
-    types::{Edge, ExtractionResult, GraphData, GraphMetadata, Hyperedge, Node, Confidence},
+    types::{Confidence, Edge, ExtractionResult, GraphData, GraphMetadata, Hyperedge, Node},
 };
 
 fn create_test_node(id: &str, source_file: &str) -> Node {
@@ -125,7 +125,10 @@ fn test_hyperedge_empty_graph() {
     let graph = create_test_graph(vec![], vec![]);
     let hyperedges = detect_hyperedges(&graph);
 
-    assert!(hyperedges.is_empty(), "Empty graph should have no hyperedges");
+    assert!(
+        hyperedges.is_empty(),
+        "Empty graph should have no hyperedges"
+    );
 }
 
 #[test]
@@ -149,7 +152,10 @@ fn test_hyperedge_single_node() {
 fn test_hyperedge_cross_file_relationships() {
     let mut nodes = vec![];
     for i in 0..5 {
-        nodes.push(create_test_node(&format!("module_a_func_{}", i), "src/module_a/mod.rs"));
+        nodes.push(create_test_node(
+            &format!("module_a_func_{}", i),
+            "src/module_a/mod.rs",
+        ));
     }
 
     let mut edges = vec![];

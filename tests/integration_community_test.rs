@@ -1,8 +1,8 @@
 //! Integration tests for community detection
 
 use garfield::{
-    build_graph, cluster, merge_into_graph, merge_extractions,
-    types::{Edge, ExtractionResult, GraphData, GraphMetadata, Node, Confidence},
+    build_graph, cluster, merge_extractions, merge_into_graph,
+    types::{Confidence, Edge, ExtractionResult, GraphData, GraphMetadata, Node},
 };
 
 fn create_test_node(id: &str, source_file: &str) -> Node {

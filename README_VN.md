@@ -1,27 +1,27 @@
 # Garfield
 
-**Build knowledge graphs from source code** - A Rust-native code analysis tool that extracts, analyzes, and visualizes relationships in your codebase.
+**Xây dựng knowledge graphs từ source code** - Công cụ phân tích code bằng Rust, giúp trích xuất, phân tích và trực quan hóa các mối quan hệ trong codebase của bạn.
 
-## What is Garfield?
+## Garfield là gì?
 
-Garfield is a lightweight code analysis tool that builds **knowledge graphs** from source code. Unlike traditional tools that just find text, Garfield understands the structure of your code:
+Garfield là công cụ phân tích code nhẹ, xây dựng **knowledge graphs** từ source code. Khác với các công cụ truyền thống chỉ tìm text, Garfield hiểu cấu trúc code của bạn:
 
-- **Functions** that call other functions
-- **Classes** that define structures and methods
-- **Modules** that group related code
-- **Hyperedges** - groups of 3+ nodes working together
+- **Functions** gọi các functions khác
+- **Classes** định nghĩa structures và methods
+- **Modules** nhóm các code liên quan
+- **Hyperedges** - nhóm 3+ nodes làm việc cùng nhau
 
-### Key Features
+### Tính năng chính
 
-- **17+ Languages Supported**: Rust, Python, Ruby, Java, Go, JavaScript, TypeScript, C, C++, Scala, Bash, Lua, PHP, Zig, Elixir, Kotlin, Swift
-- **No LLM Required**: Pure extraction-based analysis
-- **Incremental Builds**: Only re-analyze changed files
-- **Community Detection**: Leiden algorithm finds code clusters
-- **Hyperedge Detection**: 4 algorithms to find related code groups
-- **Query Interface**: Search and navigate your codebase
-- **Graph Export**: JSON output for integration with other tools
+- **17+ Ngôn ngữ**: Rust, Python, Ruby, Java, Go, JavaScript, TypeScript, C, C++, Scala, Bash, Lua, PHP, Zig, Elixir, Kotlin, Swift
+- **Không cần LLM**: Phân tích dựa trên extraction thuần túy
+- **Incremental Builds**: Chỉ phân tích lại các file đã thay đổi
+- **Community Detection**: Thuật toán Leiden tìm code clusters
+- **Hyperedge Detection**: 4 thuật toán tìm nhóm code liên quan
+- **Query Interface**: Tìm kiếm và điều hướng codebase
+- **Graph Export**: Output JSON để tích hợp với công cụ khác
 
-## Architecture
+## Kiến trúc
 
 ```mermaid
 flowchart TD
@@ -46,93 +46,93 @@ flowchart TD
     end
 ```
 
-## Algorithms
+## Các thuật toán
 
 ### 1. Leiden Community Detection
 
-**Purpose**: Group related code entities into communities.
+**Mục đích**: Nhóm các code entities liên quan thành communities.
 
-Garfield uses the **Leiden algorithm** (VTraag et al., 2018) - an optimized version of Louvain that guarantees well-connected communities.
+Garfield sử dụng **thuật toán Leiden** (VTraag et al., 2018) - phiên bản tối ưu của Louvain, đảm bảo các communities được kết nối tốt.
 
 ```
 Leiden = Louvain + Refinement Phase
 ```
 
-**How it works**:
-1. **Phase 1 (Local Move)**: Move each node to the community that gives the best modularity gain
-2. **Phase 2 (Refinement)**: Ensure communities are well-connected subgraphs
-3. **Phase 3 (Aggregation)**: Build new network at community level and repeat
+**Cách hoạt động**:
+1. **Phase 1 (Local Move)**: Di chuyển mỗi node sang community cho modularity gain tốt nhất
+2. **Phase 2 (Refinement)**: Đảm bảo communities là các subgraphs được kết nối tốt
+3. **Phase 3 (Aggregation)**: Xây dựng network mới ở cấp độ community và lặp lại
 
-**Modularity Gain Formula**:
+**Công thức Modularity Gain**:
 ```
 ΔQ = (Σ_in - Σ_out) / m - k_i × (Σ_total - k_i) / m²
 ```
 
-Where:
-- `Σ_in`: sum of weights to target community
-- `Σ_out`: sum of weights from current community  
-- `m`: total edge weights
-- `k_i`: node weight (degree)
-- `Σ_total`: target community weight
+Trong đó:
+- `Σ_in`: tổng trọng số đến target community
+- `Σ_out`: tổng trọng số từ current community  
+- `m`: tổng trọng số edges
+- `k_i`: trọng số node (degree)
+- `Σ_total`: trọng số target community
 
-**Complexity**: O(n log n) average case
+**Độ phức tạp**: O(n log n) trung bình
 
 ### 2. Hyperedge Detection
 
-**Purpose**: Find groups of 3+ nodes that work together.
+**Mục đích**: Tìm nhóm 3+ nodes làm việc cùng nhau.
 
-Garfield uses **4 algorithms** (no LLM required):
+Garfield sử dụng **4 thuật toán** (không cần LLM):
 
-#### Algorithm 1: File-Based (O(n))
+#### Thuật toán 1: File-Based (O(n))
 ```rust
-Group nodes by source file → if ≥3 nodes in same file → hyperedge
+Group nodes by source file → nếu ≥3 nodes cùng file → hyperedge
 ```
-- Fastest method
-- Best for monolithic files with many functions
+- Phương pháp nhanh nhất
+- Tốt cho các file lớn với nhiều functions
 
-#### Algorithm 2: Call Chain (O(n²))
+#### Thuật toán 2: Call Chain (O(n²))
 ```rust
 Find paths: A→B→C→D → hyperedge(A, B, C, D)
 ```
-- Finds sequential call patterns
-- Good for pipeline-like code
+- Tìm các call patterns tuần tự
+- Tốt cho code dạng pipeline
 
-#### Algorithm 3: Config Pattern (O(n))
+#### Thuật toán 3: Config Pattern (O(n))
 ```rust
 Detect: Kubernetes, Docker, Terraform patterns → extract module names
 ```
-- Domain-specific detection
-- Works with infrastructure-as-code
+- Detection theo domain cụ thể
+- Hoạt động với infrastructure-as-code
 
-#### Algorithm 4: Directory-Based (O(n))
+#### Thuật toán 4: Directory-Based (O(n))
 ```rust
 src/auth/*.rs → "auth" module
 src/api/v1/*.rs → "api/v1" module
 ```
-- Cross-file grouping
-- Best for organized projects
+- Nhóm cross-file
+- Tốt nhất cho các project có tổ chức tốt
 
 ### 3. Graph Traversal
 
 #### BFS (Breadth-First Search)
-- **Use**: Find closest relationships, explore all possibilities at same level
-- **Complexity**: O(V + E)
-- **Best for**: Shortest path, level-by-level exploration
+- **Use**: Tìm relationships gần nhất, explore tất cả possibilities cùng level
+- **Độ phức tạp**: O(V + E)
+- **Tốt cho**: Shortest path, level-by-level exploration
 
 #### DFS (Depth-First Search)  
-- **Use**: Deep exploration, finding complete paths
-- **Complexity**: O(V + E)
-- **Best for**: Deep call stacks, complete dependency chains
+- **Use**: Deep exploration, tìm complete paths
+- **Độ phức tạp**: O(V + E)
+- **Tốt cho**: Deep call stacks, complete dependency chains
 
 ### 4. Confidence Scoring
 
-Edges have confidence levels based on extraction method:
+Edges có confidence levels dựa trên phương pháp extraction:
 
-| Confidence | Score | Source |
+| Confidence | Score | Nguồn |
 |------------|-------|--------|
-| Extracted | 1.0 | Directly parsed from AST |
-| Inferred | 0.75 | Pattern-matched or call analysis |
-| Ambiguous | 0.2 | Guessed from naming conventions |
+| Extracted | 1.0 | Directly parsed từ AST |
+| Inferred | 0.75 | Pattern-matched hoặc call analysis |
+| Ambiguous | 0.2 | Đoán từ naming conventions |
 
 ## Flow
 
@@ -141,13 +141,13 @@ Edges have confidence levels based on extraction method:
 ```
 $ garfield build ./src --output garfield-out
 
-1. DETECT    → Find all code files (.rs, .py, .js, etc.)
-2. EXTRACT   → Parse AST, extract functions/classes/imports
-3. BUILD     → Create nodes and edges from extraction
-4. HYPEREDGE → Detect code groups using 4 algorithms
-5. CLUSTER   → Run Leiden to find communities
+1. DETECT    → Tìm tất cả code files (.rs, .py, .js, etc.)
+2. EXTRACT   → Parse AST, trích xuất functions/classes/imports
+3. BUILD     → Tạo nodes và edges từ extraction
+4. HYPEREDGE → Detect code groups sử dụng 4 thuật toán
+5. CLUSTER   → Chạy Leiden để tìm communities
 6. VALIDATE  → Check graph integrity
-7. EXPORT    → Save graph.json + GRAPH_REPORT.md
+7. EXPORT    → Lưu graph.json + GRAPH_REPORT.md
 ```
 
 ### Query Flow
@@ -155,17 +155,17 @@ $ garfield build ./src --output garfield-out
 ```
 $ garfield query "user authentication" --graph garfield-out/graph.json
 
-1. MATCH   → Find nodes matching query terms
-2. EXPAND  → Traverse BFS/DFS up to depth limit
+1. MATCH   → Tìm nodes matching query terms
+2. EXPAND  → Traverse BFS/DFS đến depth limit
 3. SCORE   → Rank results by relevance
-4. FORMAT  → Return top N results with paths
+4. FORMAT  → Return top N results với paths
 ```
 
-## Installation
+## Cài đặt
 
-### Prerequisites
+### Yêu cầu
 
-- Rust 1.70+ (install via [rustup](https://rustup.rs/))
+- Rust 1.70+ (cài qua [rustup](https://rustup.rs/))
 
 ### Build
 
@@ -174,48 +174,48 @@ git clone https://github.com/yourusername/garfield.git
 cd garfield
 cargo build --release
 
-# Binary at target/release/garfield
+# Binary tại target/release/garfield
 sudo cp target/release/garfield /usr/local/bin/
 ```
 
-### Usage
+### Sử dụng
 
-#### Build a graph from your code:
+#### Build graph từ code của bạn:
 
 ```bash
 # Full build
 garfield build ./src --output garfield-out
 
-# Incremental update (only changed files)
+# Incremental update (chỉ các file đã thay đổi)
 garfield build ./src --update
 ```
 
-#### Query the graph:
+#### Query graph:
 
 ```bash
 # Basic query
 garfield query "find_user" --graph garfield-out/graph.json
 
-# With filters
+# Với filters
 garfield query "auth" --node-type function --community 5 --graph garfield-out/graph.json
 
 # Deep search
 garfield query "database" --depth 5 --budget 5000 --graph garfield-out/graph.json
 ```
 
-#### Find paths between code:
+#### Tìm paths giữa các code entities:
 
 ```bash
 garfield path "main" "database" --graph garfield-out/graph.json
 ```
 
-#### Explain a specific node:
+#### Explain một node cụ thể:
 
 ```bash
 garfield explain "fn_process_request" --graph garfield-out/graph.json
 ```
 
-## Project Structure
+## Cấu trúc Project
 
 ```
 garfield/
@@ -242,13 +242,13 @@ garfield/
 ## Testing
 
 ```bash
-# Run all tests
+# Chạy tất cả tests
 cargo test
 
-# Run with coverage
+# Chạy với coverage
 cargo test -- --nocapture
 
-# Run specific test
+# Chạy specific test
 cargo test test_leiden
 ```
 
@@ -291,15 +291,15 @@ cargo test test_leiden
 
 ### GRAPH_REPORT.md
 
-Generated automatically with:
-- God nodes (most connected entities)
+Tự động generate với:
+- God nodes (entities được kết nối nhiều nhất)
 - Community statistics
 - Surprising connections
 - Confidence breakdown
 
-## Language Support
+## Ngôn ngữ được hỗ trợ
 
-| Language | Extensions | Parser |
+| Ngôn ngữ | Extensions | Parser |
 |----------|------------|--------|
 | Rust | .rs | tree-sitter-rust |
 | Python | .py | tree-sitter-python |
@@ -322,16 +322,16 @@ Generated automatically with:
 ## Performance
 
 - **File Detection**: ~1ms per file
-- **AST Extraction**: ~5-50ms per file (language dependent)
-- **Graph Build**: O(n) where n = number of nodes
-- **Leiden Clustering**: O(n log n) average
-- **Query**: O(budget) with early termination
+- **AST Extraction**: ~5-50ms per file (phụ thuộc ngôn ngữ)
+- **Graph Build**: O(n) với n = số nodes
+- **Leiden Clustering**: O(n log n) trung bình
+- **Query**: O(budget) với early termination
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - xem LICENSE file để biết thêm chi tiết.
 
-## References
+## Tham khảo
 
 - Traag, V.A., Waltman, L., & van Eck, N.J. (2018). From Louvain to Leiden: guaranteeing well-connected communities. *Scientific Reports*, 8, 11668.
 - Blondel, V.D., et al. (2008). Fast unfolding of communities in large networks. *Journal of Statistical Mechanics*.

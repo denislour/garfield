@@ -1,8 +1,8 @@
 //! Comprehensive unit tests for types module
 
 use garfield::types::{
-    Node, Edge, Hyperedge, GraphData, GraphMetadata, ExtractionResult, Confidence,
-    FileType, BuildSummary, CommunityResult,
+    BuildSummary, CommunityResult, Confidence, Edge, ExtractionResult, FileType, GraphData,
+    GraphMetadata, Hyperedge, Node,
 };
 
 mod node_tests {
@@ -137,12 +137,25 @@ mod graph_data_tests {
     fn create_minimal_graph() -> GraphData {
         GraphData {
             nodes: vec![
-                Node::new("n1".to_string(), "node1".to_string(), "src/mod.rs".to_string(), "src/mod.rs @ L1".to_string()),
-                Node::new("n2".to_string(), "node2".to_string(), "src/mod.rs".to_string(), "src/mod.rs @ L10".to_string()),
+                Node::new(
+                    "n1".to_string(),
+                    "node1".to_string(),
+                    "src/mod.rs".to_string(),
+                    "src/mod.rs @ L1".to_string(),
+                ),
+                Node::new(
+                    "n2".to_string(),
+                    "node2".to_string(),
+                    "src/mod.rs".to_string(),
+                    "src/mod.rs @ L10".to_string(),
+                ),
             ],
-            links: vec![
-                Edge::new("n1".to_string(), "n2".to_string(), "calls".to_string(), Confidence::Extracted),
-            ],
+            links: vec![Edge::new(
+                "n1".to_string(),
+                "n2".to_string(),
+                "calls".to_string(),
+                Confidence::Extracted,
+            )],
             hyperedges: vec![],
             metadata: GraphMetadata::new(2, 1, 1),
         }
@@ -193,12 +206,18 @@ mod extraction_result_tests {
     #[test]
     fn test_extraction_with_data() {
         let extraction = ExtractionResult {
-            nodes: vec![
-                Node::new("f1".to_string(), "func1".to_string(), "mod.rs".to_string(), "mod.rs @ L1".to_string()),
-            ],
-            links: vec![
-                Edge::new("f1".to_string(), "f2".to_string(), "calls".to_string(), Confidence::Extracted),
-            ],
+            nodes: vec![Node::new(
+                "f1".to_string(),
+                "func1".to_string(),
+                "mod.rs".to_string(),
+                "mod.rs @ L1".to_string(),
+            )],
+            links: vec![Edge::new(
+                "f1".to_string(),
+                "f2".to_string(),
+                "calls".to_string(),
+                Confidence::Extracted,
+            )],
             hyperedges: vec![],
         };
         assert_eq!(extraction.nodes.len(), 1);

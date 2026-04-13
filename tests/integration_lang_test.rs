@@ -1,12 +1,27 @@
 //! Integration tests for language support
 
-use garfield::{get_extension_lang, get_ts_language, LANG_CONFIGS, lang::CommentStyle};
+use garfield::{get_extension_lang, get_ts_language, lang::CommentStyle, LANG_CONFIGS};
 
 #[test]
 fn test_all_languages_have_config() {
     let langs = vec![
-        "rust", "python", "ruby", "java", "go", "javascript", "typescript", "c", "cpp",
-        "scala", "lua", "php", "bash", "zig", "elixir", "kotlin", "swift",
+        "rust",
+        "python",
+        "ruby",
+        "java",
+        "go",
+        "javascript",
+        "typescript",
+        "c",
+        "cpp",
+        "scala",
+        "lua",
+        "php",
+        "bash",
+        "zig",
+        "elixir",
+        "kotlin",
+        "swift",
     ];
 
     for lang in langs {
@@ -47,10 +62,18 @@ fn test_unknown_extension() {
 fn test_tree_sitter_language_loading() {
     for lang in ["rust", "python", "javascript", "typescript"] {
         let lang_config = LANG_CONFIGS.get(lang);
-        assert!(lang_config.is_some(), "Language '{}' should have config", lang);
+        assert!(
+            lang_config.is_some(),
+            "Language '{}' should have config",
+            lang
+        );
 
         let ts_lang = get_ts_language(lang);
-        assert!(ts_lang.is_some(), "Language '{}' should have tree-sitter grammar", lang);
+        assert!(
+            ts_lang.is_some(),
+            "Language '{}' should have tree-sitter grammar",
+            lang
+        );
     }
 }
 

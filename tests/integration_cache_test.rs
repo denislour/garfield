@@ -1,6 +1,6 @@
 //! Integration tests for cache module
 
-use garfield::cache::{FileCache, CacheEntry};
+use garfield::cache::{CacheEntry, FileCache};
 use std::collections::HashMap;
 
 #[test]
@@ -14,7 +14,7 @@ fn test_file_cache_new() {
 #[test]
 fn test_file_cache_save_load() {
     use tempfile::TempDir;
-    
+
     let temp_dir = TempDir::new().unwrap();
     let cache_path = temp_dir.path().join("cache.json");
 
@@ -49,7 +49,7 @@ fn test_file_cache_load_nonexistent() {
 #[test]
 fn test_cache_entry_source_file_tracking() {
     let mut cache = FileCache::new();
-    
+
     // Simulate adding entries with source file
     cache.by_source_file.insert(
         "main.rs".to_string(),
@@ -63,7 +63,7 @@ fn test_cache_entry_source_file_tracking() {
 #[test]
 fn test_cache_multiple_entries() {
     let mut cache = FileCache::new();
-    
+
     for i in 0..10 {
         cache.entries.insert(
             format!("file{}.rs", i),
@@ -78,7 +78,7 @@ fn test_cache_multiple_entries() {
     }
 
     assert_eq!(cache.entries.len(), 10);
-    
+
     // Verify all entries are accessible
     for i in 0..10 {
         let key = format!("file{}.rs", i);
@@ -89,7 +89,7 @@ fn test_cache_multiple_entries() {
 #[test]
 fn test_cache_entry_size_tracking() {
     let mut cache = FileCache::new();
-    
+
     cache.entries.insert(
         "small.rs".to_string(),
         CacheEntry {
@@ -100,7 +100,7 @@ fn test_cache_entry_size_tracking() {
             source_file: None,
         },
     );
-    
+
     cache.entries.insert(
         "large.rs".to_string(),
         CacheEntry {

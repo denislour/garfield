@@ -78,23 +78,23 @@ const SENSITIVE_PATTERNS: &[&str] = &[
 const CODE_EXTENSIONS: &[&str] = &[
     // Python
     "py", "pyi", "pyw", // JavaScript/TypeScript
-    "js", "mjs", "cjs", "jsx", "ts", "tsx", // Go
-    "go", // Rust
-    "rs", // Java
+    "js", "mjs", "cjs", "jsx", "ts", "tsx",  // Go
+    "go",   // Rust
+    "rs",   // Java
     "java", // C/C++
     "c", "h", "cpp", "hpp", "cc", "cxx", "hxx", // Ruby
-    "rb", // C#
-    "cs", // Kotlin
-    "kt", "kts", // Scala
+    "rb",  // C#
+    "cs",  // Kotlin
+    "kt", "kts",   // Scala
     "scala", // PHP
-    "php", // Swift
+    "php",   // Swift
     "swift", // Lua
-    "lua", // Zig
-    "zig", // PowerShell
+    "lua",   // Zig
+    "zig",   // PowerShell
     "ps1", "psm1", // Elixir
     "ex", "exs", // Objective-C
-    "m", "mm", // Julia
-    "jl", // TOML
+    "m", "mm",   // Julia
+    "jl",   // TOML
     "toml", // YAML
     "yaml", "yml", // JSON
     "json",

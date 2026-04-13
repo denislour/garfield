@@ -1,12 +1,9 @@
 //! Comprehensive unit tests for analyze module
 
 use garfield::analyze::{
-    analyze, find_god_nodes, find_surprising_connections,
-    Analysis, GodNode, SurprisingConnection,
+    analyze, find_god_nodes, find_surprising_connections, Analysis, GodNode, SurprisingConnection,
 };
-use garfield::types::{
-    Node, Edge, GraphData, GraphMetadata, Confidence,
-};
+use garfield::types::{Confidence, Edge, GraphData, GraphMetadata, Node};
 
 fn create_test_node(id: &str, label: &str) -> Node {
     Node {
@@ -48,15 +45,50 @@ fn create_graph_with_communities() -> GraphData {
     nodes[6].community = Some(2);
 
     // Edges: hub connected to all
-    edges.push(Edge::new("hub".to_string(), "c0_n1".to_string(), "calls".to_string(), Confidence::Extracted));
-    edges.push(Edge::new("hub".to_string(), "c0_n2".to_string(), "calls".to_string(), Confidence::Extracted));
-    edges.push(Edge::new("hub".to_string(), "c0_n3".to_string(), "calls".to_string(), Confidence::Extracted));
-    edges.push(Edge::new("hub".to_string(), "c1_n1".to_string(), "calls".to_string(), Confidence::Inferred));
-    edges.push(Edge::new("hub".to_string(), "c2_n1".to_string(), "calls".to_string(), Confidence::Inferred));
+    edges.push(Edge::new(
+        "hub".to_string(),
+        "c0_n1".to_string(),
+        "calls".to_string(),
+        Confidence::Extracted,
+    ));
+    edges.push(Edge::new(
+        "hub".to_string(),
+        "c0_n2".to_string(),
+        "calls".to_string(),
+        Confidence::Extracted,
+    ));
+    edges.push(Edge::new(
+        "hub".to_string(),
+        "c0_n3".to_string(),
+        "calls".to_string(),
+        Confidence::Extracted,
+    ));
+    edges.push(Edge::new(
+        "hub".to_string(),
+        "c1_n1".to_string(),
+        "calls".to_string(),
+        Confidence::Inferred,
+    ));
+    edges.push(Edge::new(
+        "hub".to_string(),
+        "c2_n1".to_string(),
+        "calls".to_string(),
+        Confidence::Inferred,
+    ));
 
     // Internal edges
-    edges.push(Edge::new("c0_n1".to_string(), "c0_n2".to_string(), "calls".to_string(), Confidence::Extracted));
-    edges.push(Edge::new("c1_n1".to_string(), "c1_n2".to_string(), "calls".to_string(), Confidence::Extracted));
+    edges.push(Edge::new(
+        "c0_n1".to_string(),
+        "c0_n2".to_string(),
+        "calls".to_string(),
+        Confidence::Extracted,
+    ));
+    edges.push(Edge::new(
+        "c1_n1".to_string(),
+        "c1_n2".to_string(),
+        "calls".to_string(),
+        Confidence::Extracted,
+    ));
 
     GraphData {
         nodes,
@@ -98,8 +130,16 @@ mod god_nodes_tests {
         let god_nodes = find_god_nodes(&graph, 10);
 
         for god_node in &god_nodes {
-            let edges_from = graph.links.iter().filter(|e| e.source == god_node.node.id).count();
-            let edges_to = graph.links.iter().filter(|e| e.target == god_node.node.id).count();
+            let edges_from = graph
+                .links
+                .iter()
+                .filter(|e| e.source == god_node.node.id)
+                .count();
+            let edges_to = graph
+                .links
+                .iter()
+                .filter(|e| e.target == god_node.node.id)
+                .count();
             assert_eq!(god_node.degree, edges_from + edges_to);
         }
     }
