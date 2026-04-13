@@ -34,7 +34,7 @@ pub use export::{export_stats, from_json, to_json};
 pub use extract::{extract_file, extract_files};
 pub use report::{generate_report, print_report, DetectInfo, DiffInfo};
 pub use serve::{
-    find_shortest_path, query, score_nodes, get_node, get_neighbors, get_community, 
+    find_shortest_path, query, query_with_filters, score_nodes, get_node, get_neighbors, get_community, 
     graph_stats, format_graph_stats, get_node_body, NodeDetails, CommunityInfo, GraphStats,
     get_hyperedge, HyperedgeInfo,
 };
@@ -180,6 +180,25 @@ pub fn run_query(
 ) -> anyhow::Result<String> {
     let graph = from_json(Path::new(graph_path))?;
     Ok(serve::query(&graph, question, use_dfs, depth, budget))
+}
+
+/// Query with filters
+pub fn run_query_with_filters(
+    graph_path: &str,
+    question: &str,
+    use_dfs: bool,
+    depth: usize,
+    budget: usize,
+    node_type: Option<&str>,
+    community: Option<u32>,
+    source: Option<&str>,
+    hyperedge: Option<&str>,
+) -> anyhow::Result<String> {
+    let graph = from_json(Path::new(graph_path))?;
+    Ok(serve::query_with_filters(
+        &graph, question, use_dfs, depth, budget,
+        node_type, community, source, hyperedge
+    ))
 }
 
 /// Find path between nodes

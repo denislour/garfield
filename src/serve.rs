@@ -428,6 +428,116 @@ pub fn query(
     header + &subgraph_to_text(graph, &nodes, &edges, token_budget)
 }
 
+/// Query with filters - advanced search
+pub fn query_with_filters(
+    graph: &GraphData,
+    question: &str,
+    use_dfs: bool,
+    depth: usize,
+    token_budget: usize,
+    node_type: Option<&str>,
+    community: Option<u32>,
+    source: Option<&str>,
+    hyperedge: Option<&str>,
+) -> String {
+    let terms: Vec<String> = question
+        .split_whitespace()
+        .filter(|w| w.len() > 2)
+        .map(|w| w.to_lowercase())
+        .collect();
+
+    let mut scored = score_nodes(graph, &terms);
+
+    // Apply filters
+    if let Some(nt) = node_type {
+        let nt_lower = nt.to_lowercase();
+        scored.retain(|(_, id)| {
+            graph.nodes.iter()
+                .find(|n| &n.id == *id)
+                .map(|n| n.node_type.as_ref()
+                    .map(|t| t.to_lowercase().contains(&nt_lower))
+                    .unwrap_or(false))
+                .unwrap_or(false)
+        });
+    }
+
+    if let Some(comm) = community {
+        scored.retain(|(_, id)| {
+            graph.nodes.iter()
+                .find(|n| &n.id == *id)
+                .map(|n| n.community == Some(comm))
+                .unwrap_or(false)
+        });
+    }
+
+    if let Some(src) = source {
+        let src_lower = src.to_lowercase();
+        scored.retain(|(_, id)| {
+            graph.nodes.iter()
+                .find(|n| &n.id == *id)
+                .map(|n| n.source_file.to_lowercase().contains(&src_lower))
+                .unwrap_or(false)
+        });
+    }
+
+    if let Some(he) = hyperedge {
+        let he_lower = he.to_lowercase();
+        scored.retain(|(_, id)| {
+            graph.hyperedges.iter()
+                .any(|hyper| {
+                    hyper.label.to_lowercase().contains(&he_lower)
+                        && hyper.nodes.contains(&id.to_string())
+                })
+        });
+    }
+
+    if scored.is_empty() {
+        return "No matching nodes found with filters.".to_string();
+    }
+
+    // Take top 3 starting nodes
+    let start_nodes: Vec<&str> = scored.iter().take(3).map(|(_, id)| *id).collect();
+
+    let (nodes, edges) = if use_dfs {
+        dfs(graph, &start_nodes, depth)
+    } else {
+        bfs(graph, &start_nodes, depth)
+    };
+
+    let traversal = if use_dfs { "DFS" } else { "BFS" };
+    
+    let start_labels: Vec<_> = start_nodes
+        .iter()
+        .filter_map(|id| graph.nodes.iter().find(|n| &n.id == *id).map(|n| n.label.as_str()))
+        .collect();
+
+    let mut filters_str = String::new();
+    if node_type.is_some() {
+        filters_str.push_str(&format!(" [type:{:?}]", node_type));
+    }
+    if community.is_some() {
+        filters_str.push_str(&format!(" [community:{}]", community.unwrap()));
+    }
+    if source.is_some() {
+        filters_str.push_str(&format!(" [source:{}]", source.unwrap()));
+    }
+    if hyperedge.is_some() {
+        filters_str.push_str(&format!(" [hyperedge:{}]", hyperedge.unwrap()));
+    }
+
+    let header = format!(
+        "Query: \"{}\"{}\nTraversal: {} depth={} | Start: {} | {} nodes found\n\n",
+        question,
+        filters_str,
+        traversal,
+        depth,
+        start_labels.join(", "),
+        nodes.len()
+    );
+
+    header + &subgraph_to_text(graph, &nodes, &edges, token_budget)
+}
+
 /// Get detailed node information
 pub fn get_node(graph: &GraphData, identifier: &str) -> Option<NodeDetails> {
     // Find node by ID or label

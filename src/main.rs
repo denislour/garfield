@@ -45,6 +45,22 @@ enum Cli {
         /// Graph file path
         #[arg(long, default_value = "garfield-out/graph.json")]
         graph: String,
+
+        /// Filter by node type (function, class, method, struct)
+        #[arg(long, value_name = "TYPE")]
+        node_type: Option<String>,
+
+        /// Filter by community ID
+        #[arg(long, value_name = "ID")]
+        community: Option<u32>,
+
+        /// Filter by source file path pattern
+        #[arg(long, value_name = "PATTERN")]
+        source: Option<String>,
+
+        /// Filter by hyperedge (module) name
+        #[arg(long, value_name = "MODULE")]
+        hyperedge: Option<String>,
     },
 
     /// Find shortest path between two nodes
@@ -146,14 +162,34 @@ fn main() {
             depth,
             budget,
             graph,
+            node_type,
+            community,
+            source,
+            hyperedge,
         } => {
             let mode = if dfs { "DFS" } else { "BFS" };
             println!("Query: {}", question);
             println!("Mode: {} (depth={}, budget={})\n", mode, depth, budget);
 
-            match garfield::run_query(&graph, &question, dfs, depth, budget) {
-                Ok(result) => {
-                    println!("{}", result);
+            // Check if any filters are active
+            let has_filters = node_type.is_some() || community.is_some() 
+                || source.is_some() || hyperedge.is_some();
+
+            let result = if has_filters {
+                garfield::run_query_with_filters(
+                    &graph, &question, dfs, depth, budget,
+                    node_type.as_deref(),
+                    community,
+                    source.as_deref(),
+                    hyperedge.as_deref(),
+                )
+            } else {
+                garfield::run_query(&graph, &question, dfs, depth, budget)
+            };
+
+            match result {
+                Ok(output) => {
+                    println!("{}", output);
                 }
                 Err(e) => {
                     eprintln!("Error: {}", e);
