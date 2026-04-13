@@ -36,6 +36,7 @@ pub use report::{generate_report, print_report, DetectInfo, DiffInfo};
 pub use serve::{
     find_shortest_path, query, score_nodes, get_node, get_neighbors, get_community, 
     graph_stats, format_graph_stats, get_node_body, NodeDetails, CommunityInfo, GraphStats,
+    get_hyperedge, HyperedgeInfo,
 };
 pub use lang::{LangConfig, LANG_CONFIGS, get_ts_language, get_extension_lang};
 pub use hyperedge::detect_hyperedges;

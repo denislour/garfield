@@ -38,6 +38,17 @@ pub struct NodeDetails {
     pub node_type: Option<String>,
     pub incoming_edges: Vec<EdgeInfo>,
     pub outgoing_edges: Vec<EdgeInfo>,
+    pub hyperedge: Option<HyperedgeInfo>,  // ✨ Module info
+}
+
+/// Hyperedge info for node details
+#[derive(Debug, Clone)]
+pub struct HyperedgeInfo {
+    pub id: String,
+    pub label: String,
+    pub member_count: usize,
+    pub relation: String,
+    pub confidence_score: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -455,6 +466,17 @@ pub fn get_node(graph: &GraphData, identifier: &str) -> Option<NodeDetails> {
         })
         .collect();
 
+    // Find hyperedge containing this node
+    let hyperedge = graph.hyperedges.iter()
+        .find(|he| he.nodes.contains(&node.id))
+        .map(|he| HyperedgeInfo {
+            id: he.id.clone(),
+            label: he.label.clone(),
+            member_count: he.nodes.len(),
+            relation: he.relation.clone(),
+            confidence_score: he.confidence_score,
+        });
+
     Some(NodeDetails {
         id: node.id.clone(),
         label: node.label.clone(),
@@ -464,7 +486,21 @@ pub fn get_node(graph: &GraphData, identifier: &str) -> Option<NodeDetails> {
         node_type: node.node_type.clone(),
         incoming_edges: incoming,
         outgoing_edges: outgoing,
+        hyperedge,
     })
+}
+
+/// Get hyperedge by ID
+pub fn get_hyperedge(graph: &GraphData, identifier: &str) -> Option<HyperedgeInfo> {
+    graph.hyperedges.iter()
+        .find(|he| he.id == identifier || he.label.to_lowercase().contains(&identifier.to_lowercase()))
+        .map(|he| HyperedgeInfo {
+            id: he.id.clone(),
+            label: he.label.clone(),
+            member_count: he.nodes.len(),
+            relation: he.relation.clone(),
+            confidence_score: he.confidence_score,
+        })
 }
 
 /// Get neighbors of a node

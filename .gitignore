@@ -19,7 +19,6 @@
 Thumbs.db
 
 # Graph output - user generated
-graphify-out/
 garfield-out/
 *.json
 
